@@ -1,0 +1,6 @@
+{
+  "name": "GatiAI – AI Infrastructure Planning Assistant",
+  "description": "PM Gati Shakti multi-modal AI infrastructure planning platform for optimal route generation, conflict detection, risk prediction, environmental impact analysis, and decision support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
