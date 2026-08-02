@@ -10,11 +10,14 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
-// CORS & JSON Header Middleware
+// CORS & No-Cache Middleware
 app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
   next();
 });
 
@@ -392,7 +395,7 @@ app.post('/api/routes/env-check', async (req, res) => {
         const waypoints: [number, number][] = route.waypoints || [];
         if (waypoints.length === 0) return route;
 
-        // Sample waypoints to build targeted Overpass bounding boxes (prevents 504 timeouts on long 1000km routes)
+        // Sample waypoints to build targeted Overpass bounding boxes
         const sampleStep = Math.max(1, Math.floor(waypoints.length / 6));
         const sampledWaypoints = waypoints.filter((_, idx) => idx % sampleStep === 0 || idx === waypoints.length - 1);
 
@@ -422,7 +425,6 @@ app.post('/api/routes/env-check', async (req, res) => {
 
         let forestCount = 0;
         let protectedCount = 0;
-        let querySucceeded = false;
 
         const forestGeometries: any[] = [];
         const protectedGeometries: any[] = [];
@@ -443,7 +445,6 @@ app.post('/api/routes/env-check', async (req, res) => {
           });
 
           if (ovRes.ok) {
-            querySucceeded = true;
             const ovData = await ovRes.json();
             const elements: any[] = ovData.elements || [];
 
@@ -812,7 +813,7 @@ app.use('/api/*', (_req, res) => {
 });
 
 // ------------------------------------
-// VITE / STATIC SERVING
+// VITE / STATIC SERVING (No-Cache headers)
 // ------------------------------------
 async function startServer() {
   const distPath = path.join(process.cwd(), 'dist');
@@ -834,8 +835,21 @@ async function startServer() {
       staticPath = path.resolve(__dirname);
     }
     console.log(`Serving compiled production static assets from: ${staticPath}`);
-    app.use(express.static(staticPath));
+    app.use(
+      express.static(staticPath, {
+        etag: false,
+        maxAge: 0,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          }
+        },
+      })
+    );
     app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(staticPath, 'index.html'));
     });
   }
