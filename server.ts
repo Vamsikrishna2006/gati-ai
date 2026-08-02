@@ -105,6 +105,25 @@ function getPointDistanceMeters(p1: [number, number], p2: [number, number]): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Helper to check if two routes overlap too heavily (>75% spatial overlap)
+function isRouteOverlapTooHigh(waypointsA: [number, number][], waypointsB: [number, number][]): boolean {
+  if (!waypointsA || !waypointsB || waypointsA.length === 0 || waypointsB.length === 0) return false;
+  
+  const sampleIndices = [0.2, 0.4, 0.6, 0.8].map(ratio => Math.floor(waypointsA.length * ratio));
+  let closeMatches = 0;
+  
+  for (const idx of sampleIndices) {
+    const pA = waypointsA[idx];
+    if (!pA) continue;
+    const minDist = Math.min(...waypointsB.map(pB => getPointDistanceMeters(pA, pB)));
+    if (minDist < 12000) { // within 12km overlap
+      closeMatches++;
+    }
+  }
+  
+  return closeMatches >= 3;
+}
+
 // Fallback route generator if ORS is offline
 function generateFallbackRoutes(
   sourceCoords: [number, number],
@@ -133,13 +152,17 @@ function generateFallbackRoutes(
     [dLat, dLng],
   ];
 
-  const latOffset = (dLat - sLat) > 0 ? 0.35 : -0.35;
-  const lngOffset = (dLng - sLng) > 0 ? -0.25 : 0.25;
+  const dx = dLng - sLng;
+  const dy = dLat - sLat;
+  const norm = Math.sqrt(dx * dx + dy * dy) || 1;
+  const perpLat = (-dx / norm) * 0.85;
+  const perpLng = (dy / norm) * 0.85;
+
   const waypointsB: [number, number][] = [
     [sLat, sLng],
-    [sLat + (dLat - sLat) * 0.20 + latOffset * 0.5, sLng + (dLng - sLng) * 0.20 + lngOffset * 0.5],
-    [sLat + (dLat - sLat) * 0.50 + latOffset, sLng + (dLng - sLng) * 0.50 + lngOffset],
-    [sLat + (dLat - sLat) * 0.80 + latOffset * 0.5, sLng + (dLng - sLng) * 0.80 + lngOffset * 0.5],
+    [sLat + (dLat - sLat) * 0.25 + perpLat * 0.6, sLng + (dLng - sLng) * 0.25 + perpLng * 0.6],
+    [sLat + (dLat - sLat) * 0.50 + perpLat, sLng + (dLng - sLng) * 0.50 + perpLng],
+    [sLat + (dLat - sLat) * 0.75 + perpLat * 0.6, sLng + (dLng - sLng) * 0.75 + perpLng * 0.6],
     [dLat, dLng],
   ];
 
@@ -166,8 +189,8 @@ function generateFallbackRoutes(
       id: 'rt-2',
       name: 'Route B',
       color: '#f59e0b',
-      distanceKm: parseFloat((directDist * 1.24).toFixed(1)),
-      durationMinutes: Math.round((directDist * 1.24) / 1.1),
+      distanceKm: parseFloat((directDist * 1.28).toFixed(1)),
+      durationMinutes: Math.round((directDist * 1.28) / 1.1),
       forestFeatureCount: 0,
       protectedAreaFeatureCount: 0,
       forestOverlapKm: 0,
@@ -256,93 +279,64 @@ app.post('/api/routes/ors', async (req, res) => {
 
   if (apiKey) {
     try {
-      const altBody = {
-        coordinates: [
-          [sourceCoords[1], sourceCoords[0]],
-          [destCoords[1], destCoords[0]],
-        ],
-        alternative_routes: { share_factor: 0.6, target_count: 2, weight_factor: 1.6 },
-        geometry: true,
-        instructions: false,
-      };
-
-      const orsRes = await fetch(
-        'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(altBody),
-        }
-      );
-
-      if (orsRes.ok) {
-        const orsData = await orsRes.json();
-        const features = orsData.features || [];
-
-        if (features.length >= 2) {
-          const routeColors = ['#14b8a6', '#f59e0b'];
-          const routes = features.slice(0, 2).map((feat: any, idx: number) => {
-            const props = feat.properties?.summary || { distance: 100000, duration: 3600 };
-            const waypoints: [number, number][] = feat.geometry?.coordinates?.map(
-              ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
-            ) || [];
-
-            return {
-              id: `rt-${idx + 1}`,
-              name: idx === 0 ? 'Route A' : 'Route B',
-              color: routeColors[idx],
-              distanceKm: parseFloat((props.distance / 1000).toFixed(1)),
-              durationMinutes: Math.round(props.duration / 60),
-              forestFeatureCount: 0,
-              protectedAreaFeatureCount: 0,
-              forestOverlapKm: 0,
-              protectedOverlapKm: 0,
-              riverCrossingCount: 0,
-              riverCrossings: [],
-              pipelineCrossingCount: 0,
-              undergroundCableCrossingCount: 0,
-              utilityIntersections: [],
-              utilityDataState: 'none_detected' as const,
-              waypoints,
-            };
-          });
-
-          return res.json({ routes });
-        }
-      }
-
       const [sLat, sLng] = sourceCoords;
       const [dLat, dLng] = destCoords;
 
+      // 1. Fetch Primary Direct Driving Route A
       const resA = await fetchSingleOrsRoute(apiKey, [sourceCoords, destCoords]);
 
-      const midLat = (sLat + dLat) / 2 + ((dLat - sLat) > 0 ? 0.35 : -0.35);
-      const midLng = (sLng + dLng) / 2 + ((dLng - sLng) > 0 ? -0.3 : 0.3);
-      const viaPoint: [number, number] = [midLat, midLng];
+      // 2. Compute a Perpendicular Via-Point to Guarantee a Distinct Candidate Corridor B
+      const midLat = (sLat + dLat) / 2;
+      const midLng = (sLng + dLng) / 2;
+
+      const dx = dLng - sLng;
+      const dy = dLat - sLat;
+      const norm = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      // Offset perpendicularly by ~0.9 degrees (~95 km detour) to force an inland/coastal alternative highway corridor
+      const offsetLat = midLat + (-dx / norm) * 0.95;
+      const offsetLng = midLng + (dy / norm) * 0.95;
+      const viaPointB: [number, number] = [offsetLat, offsetLng];
 
       let resB;
       try {
-        resB = await fetchSingleOrsRoute(apiKey, [sourceCoords, viaPoint, destCoords]);
+        resB = await fetchSingleOrsRoute(apiKey, [sourceCoords, viaPointB, destCoords]);
       } catch (e) {
-        resB = {
-          distanceKm: parseFloat((resA.distanceKm * 1.15).toFixed(1)),
-          durationMinutes: Math.round(resA.durationMinutes * 1.15),
-          waypoints: resA.waypoints.map(([lat, lng], idx, arr) => {
-            if (idx > 0 && idx < arr.length - 1) {
-              return [lat + 0.15 * Math.sin(idx), lng + 0.15 * Math.cos(idx)] as [number, number];
-            }
-            return [lat, lng] as [number, number];
-          }),
-        };
+        // Reverse perpendicular offset if primary via-point hits water or unroutable segment
+        const revOffsetLat = midLat - (-dx / norm) * 0.95;
+        const revOffsetLng = midLng - (dy / norm) * 0.95;
+        const revViaPointB: [number, number] = [revOffsetLat, revOffsetLng];
+        try {
+          resB = await fetchSingleOrsRoute(apiKey, [sourceCoords, revViaPointB, destCoords]);
+        } catch (e2) {
+          resB = {
+            distanceKm: parseFloat((resA.distanceKm * 1.18).toFixed(1)),
+            durationMinutes: Math.round(resA.durationMinutes * 1.18),
+            waypoints: resA.waypoints.map(([lat, lng], idx, arr) => {
+              if (idx > 0 && idx < arr.length - 1) {
+                return [lat + 0.35 * Math.sin(idx), lng + 0.35 * Math.cos(idx)] as [number, number];
+              }
+              return [lat, lng] as [number, number];
+            }),
+          };
+        }
+      }
+
+      // If resB is still too similar to resA, apply distinct via detour
+      if (isRouteOverlapTooHigh(resA.waypoints, resB.waypoints)) {
+        const altOffsetLat = midLat - (-dx / norm) * 1.2;
+        const altOffsetLng = midLng - (dy / norm) * 1.2;
+        try {
+          resB = await fetchSingleOrsRoute(apiKey, [sourceCoords, [altOffsetLat, altOffsetLng], destCoords]);
+        } catch (errAlt) {
+          // Keep resB
+        }
       }
 
       const routes = [
         {
           id: 'rt-1',
-          name: 'Route A',
+          name: 'Route A (Primary Corridor)',
           color: '#14b8a6',
           distanceKm: resA.distanceKm,
           durationMinutes: resA.durationMinutes,
@@ -360,7 +354,7 @@ app.post('/api/routes/ors', async (req, res) => {
         },
         {
           id: 'rt-2',
-          name: 'Route B',
+          name: 'Route B (Alternative Corridor)',
           color: '#f59e0b',
           distanceKm: resB.distanceKm,
           durationMinutes: resB.durationMinutes,
