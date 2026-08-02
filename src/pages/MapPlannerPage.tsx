@@ -71,6 +71,12 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
           destCoords: destNode.coords,
         }),
       });
+
+      if (!orsRes.ok) {
+        const errText = await orsRes.text();
+        throw new Error(`Routing engine error (${orsRes.status}): ${errText || 'Unable to fetch route geometry'}`);
+      }
+
       const orsData = await orsRes.json();
       const orsRoutes: RouteOption[] = orsData?.routes || [];
 
@@ -84,8 +90,12 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ routes: orsRoutes }),
       });
-      const envData = await envRes.json();
-      const finalRoutes: RouteOption[] = envData?.routes || orsRoutes;
+
+      let finalRoutes: RouteOption[] = orsRoutes;
+      if (envRes.ok) {
+        const envData = await envRes.json();
+        finalRoutes = envData?.routes || orsRoutes;
+      }
 
       setRoutes(finalRoutes);
       setSelectedRouteId(finalRoutes[0]?.id || '');

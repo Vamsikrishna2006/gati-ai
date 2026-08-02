@@ -10,6 +10,14 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
+// CORS & JSON Header Middleware
+app.use((_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
+
 // ------------------------------------
 // GEMINI CLIENT (lazy init)
 // ------------------------------------
@@ -760,6 +768,11 @@ These findings indicate different planning considerations, but they do not estab
       explanation: `Route A measures ${routeA?.distanceKm || 0} km with ${routeA?.forestFeatureCount || 0} mapped forest features and ${routeA?.riverCrossingCount || 0} mapped river crossings. Route B measures ${routeB?.distanceKm || 0} km with ${routeB?.forestFeatureCount || 0} mapped forest features and ${routeB?.riverCrossingCount || 0} mapped river crossings. Field utility verification is recommended.`
     });
   }
+});
+
+// Catch-all API 404 handler returning JSON instead of raw text
+app.use('/api/*', (_req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
 });
 
 // ------------------------------------
