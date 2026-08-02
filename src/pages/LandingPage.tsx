@@ -1,161 +1,168 @@
 import React from 'react';
-import { Sparkles, MapPin, Layers, Route, ShieldCheck, ArrowRight, Bot, ChevronRight, Shield, Building2 } from 'lucide-react';
+import { ArrowRight, Map, GitCompare, Sparkles, Trees, Shield, ChevronRight } from 'lucide-react';
 
 interface LandingPageProps {
   onStartPlanner: () => void;
-  onLogin: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartPlanner, onLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartPlanner }) => {
   return (
-    <div className="min-h-screen bg-[#060911] text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] relative overflow-hidden">
-      {/* Official Government Tricolour Top Accent Ribbon */}
-      <div className="fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-[#FF9933] via-white to-[#138808] z-50" />
+    <div className="min-h-screen flex flex-col text-slate-100 relative overflow-hidden bg-ambient-mesh" style={{ fontFamily: "'Inter', sans-serif" }}>
 
-      {/* Top Header */}
-      <header className="h-20 border-b border-slate-800/80 px-6 lg:px-12 flex items-center justify-between sticky top-0 bg-[#0c121d]/90 backdrop-blur-md z-40 shadow-2xl">
+      {/* Header */}
+      <header className="relative z-10 h-16 flex items-center justify-between px-6 md:px-12 glass border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 via-blue-600 to-emerald-600 flex items-center justify-center font-bold text-white text-xl shadow-lg ring-1 ring-blue-400/30">
-            <Layers className="w-5 h-5 text-white stroke-[2.5]" />
+          <div className="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center shadow-md shadow-teal-950/50 ring-1 ring-teal-400/30">
+            <Map className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-white flex items-center gap-1.5">
-                Gati<span className="text-blue-400">AI</span>
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                भारत सरकार | GOI
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-              PM Gati Shakti National Master Plan Portal
-            </span>
+            <div className="text-base font-bold text-white">Gati<span className="text-teal-400">AI</span></div>
+            <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Route Planner</div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={onLogin}
-            className="px-4 py-2 text-xs font-bold text-blue-300 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-full transition-all flex items-center gap-1.5"
-          >
-            <Shield className="w-3.5 h-3.5 text-blue-400" /> Officer Login
-          </button>
+          <span className="hidden sm:flex items-center gap-1.5 glass-light px-3 py-1.5 rounded-full text-[11px] text-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+            Live GIS · OpenRouteService · Overpass · Gemini
+          </span>
           <button
             onClick={onStartPlanner}
-            className="px-5 py-2.5 text-xs font-extrabold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 rounded-full transition-all flex items-center gap-2 shadow-lg shadow-blue-900/40"
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-xl shadow-md shadow-teal-950/40 transition-all cursor-pointer"
           >
-            Launch Map Planner <ArrowRight className="w-4 h-4" />
+            Launch Map Planner <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-12 pb-20 px-6 lg:px-12 max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
-        {/* Top Badges */}
+      {/* Hero Content */}
+      <section className="relative z-10 flex-1 flex flex-col justify-center px-6 md:px-16 pt-16 pb-20 max-w-6xl mx-auto w-full">
+
+        {/* Badges */}
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            प्रधान मंत्री गति शक्ति - राष्ट्रीय मास्टर प्लान
-          </div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30">
-            <Sparkles className="w-4 h-4 text-blue-400" /> Multi-Modal AI Corridor Route Optimization
-          </div>
+          <span className="glass-light px-3.5 py-1.5 rounded-full text-[11px] text-amber-400 border border-amber-500/25 font-semibold">
+            Early-Stage Corridor Route Screening Assistant
+          </span>
+          <span className="glass-light px-3.5 py-1.5 rounded-full text-[11px] text-teal-400 border border-teal-500/25 font-semibold">
+            Verified Geospatial Analysis
+          </span>
         </div>
 
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white max-w-4xl leading-[1.15] mb-6">
-          Smarter, Faster & Eco-Friendly Corridor Route Planning for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400">PM Gati Shakti</span>
+        {/* Main Headline */}
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-[1.12] tracking-tight max-w-4xl mb-6">
+          Identify environmental constraints<br />
+          <span className="text-teal-400">before commitment</span><br />
+          <span className="text-slate-400 font-normal text-2xl sm:text-3xl">using real OpenStreetMap & routing APIs.</span>
         </h1>
 
-        <p className="text-slate-300 text-base md:text-lg max-w-2xl leading-relaxed mb-8">
-          Accelerate national infrastructure decisions with real-time multi-layer GIS conflict detection, automated terrain elevation profiles, predictive delay risk modeling, and instant Gemini 3.6 AI decision briefs.
+        <p className="text-slate-300 text-base max-w-2xl leading-relaxed mb-8">
+          Select origin and destination nodes. OpenRouteService computes candidate driving alignments, Overpass measures actual forest, protected area, and river line intersections, and Gemini provides a neutral tradeoff summary.
         </p>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-wrap items-center gap-4 mb-14">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3 mb-14">
           <button
             onClick={onStartPlanner}
-            className="px-7 py-3.5 rounded-full font-extrabold text-sm text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:opacity-90 transition-all flex items-center gap-2.5 shadow-xl shadow-blue-950/50"
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-teal-950/50 transition-all cursor-pointer"
           >
-            Open Interactive GIS Planner <Route className="w-5 h-5" />
+            Start GIS Screening <ArrowRight className="w-4 h-4" />
           </button>
-          <button
-            onClick={onLogin}
-            className="px-6 py-3.5 rounded-full font-bold text-sm text-slate-200 bg-[#0c121d] hover:bg-slate-800 border border-slate-700/80 transition-all flex items-center gap-2 shadow-md"
+          <a
+            href="#how"
+            className="flex items-center gap-2 px-5 py-3.5 glass-card text-slate-200 hover:text-white text-sm font-medium rounded-xl transition-all"
           >
-            Officer / Judge Sign In <ChevronRight className="w-4 h-4" />
-          </button>
+            How it works <ChevronRight className="w-4 h-4" />
+          </a>
         </div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl">
-          <div className="p-4 rounded-2xl bg-[#0c121d] border border-slate-800 shadow-xl">
-            <div className="text-2xl font-black text-emerald-400">70%</div>
-            <div className="text-xs text-slate-400 font-medium mt-1">Faster Route Approval Time</div>
+        {/* Data Provenance Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl">
+          <div className="glass-card px-4 py-3 rounded-xl border border-white/[0.08]">
+            <div className="text-xs font-bold text-teal-400">OpenRouteService</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Real driving routing</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#0c121d] border border-slate-800 shadow-xl">
-            <div className="text-2xl font-black text-blue-400">12+ Layers</div>
-            <div className="text-xs text-slate-400 font-medium mt-1">Integrated GIS Datasets</div>
+          <div className="glass-card px-4 py-3 rounded-xl border border-white/[0.08]">
+            <div className="text-xs font-bold text-teal-400">Overpass API</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">OSM forest & river layers</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#0c121d] border border-slate-800 shadow-xl">
-            <div className="text-2xl font-black text-purple-400">₹2,400 Cr</div>
-            <div className="text-xs text-slate-400 font-medium mt-1">Avg Overrun Risk Prevented</div>
+          <div className="glass-card px-4 py-3 rounded-xl border border-white/[0.08]">
+            <div className="text-xs font-bold text-amber-400">Line Intersection</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Exact river crossings</div>
           </div>
-          <div className="p-4 rounded-2xl bg-[#0c121d] border border-slate-800 shadow-xl">
-            <div className="text-2xl font-black text-amber-400">Zero</div>
-            <div className="text-xs text-slate-400 font-medium mt-1">Core Forest Disruption via AI</div>
+          <div className="glass-card px-4 py-3 rounded-xl border border-white/[0.08]">
+            <div className="text-xs font-bold text-amber-400">Google Gemini</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Neutral tradeoff summary</div>
           </div>
         </div>
       </section>
 
-      {/* Core Features Showcase */}
-      <section className="bg-[#0c121d]/80 border-t border-slate-800 py-16 px-6 lg:px-12 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">
-              Solving Inter-Departmental Infrastructure Bottlenecks
+      {/* How it works Section */}
+      <section id="how" className="relative z-10 border-t border-white/[0.08] py-16 px-6 md:px-16 glass-light">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              Verifiable 3-Step Screening Pipeline
             </h2>
-            <p className="text-xs md:text-sm text-slate-400">
-              Transforming complex multi-modal corridor planning into a streamlined, data-driven workflow across railways, highways, ports, and environmental authorities.
+            <p className="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto">
+              Every statistic is computed from live geospatial data. No hardcoded or simulated cost, carbon, or risk figures.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-[#080b12] border border-slate-800 space-y-3 shadow-xl hover:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <MapPin className="w-5 h-5" />
+            {/* Step 1 */}
+            <div className="glass-card rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 text-xs font-bold flex items-center justify-center border border-teal-500/30">1</span>
+                <GitCompare className="w-4 h-4 text-teal-400" />
+                <span className="text-xs font-bold text-teal-400 uppercase tracking-wider">Candidate Routing</span>
               </div>
-              <h3 className="font-bold text-base text-white">Multi-Layer GIS Mapping</h3>
+              <h3 className="font-bold text-white text-base mb-2">Real OpenRouteService Polylines</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Overlay forest reserves, river basins, protected sanctuaries, existing freight lines, and utility corridors on a real-time vector canvas.
+                Fetch driving route options between origin and destination nodes. Distances and travel durations are calculated directly from standard road network data.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#080b12] border border-slate-800 space-y-3 shadow-xl hover:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5" />
+            {/* Step 2 */}
+            <div className="glass-card rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 text-xs font-bold flex items-center justify-center border border-teal-500/30">2</span>
+                <Trees className="w-4 h-4 text-teal-400" />
+                <span className="text-xs font-bold text-teal-400 uppercase tracking-wider">GIS Intersection</span>
               </div>
-              <h3 className="font-bold text-base text-white">Spatial Conflict Detection</h3>
+              <h3 className="font-bold text-white text-base mb-2">Overpass Environmental Screening</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Instantly highlight intersections with eco-sensitive tiger corridors, coastal zones, high-voltage lines, and urban congestion areas.
+                Query OpenStreetMap for forest polygons, protected area boundaries, and river line geometries. Exact line-intersection algorithms locate river crossings.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#080b12] border border-slate-800 space-y-3 shadow-xl hover:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
-                <Bot className="w-5 h-5" />
+            {/* Step 3 */}
+            <div className="glass-card rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center justify-center border border-amber-500/30">3</span>
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Neutral AI Layer</span>
               </div>
-              <h3 className="font-bold text-base text-white">Gemini AI Decision Support</h3>
+              <h3 className="font-bold text-white text-base mb-2">Grounded Tradeoff Explanation</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Natural language query assistant providing deep route comparison explanations, risk summaries, and downloadable DPR executive reports.
+                Gemini receives only the measured metrics (distance, duration, forest overlap, protected area overlap, river crossings) and explains what is being traded off without picking a winner.
               </p>
+            </div>
+          </div>
+
+          {/* Principle Disclaimer */}
+          <div className="mt-10 glass-card rounded-2xl p-5 border border-white/[0.08] flex items-start gap-3">
+            <Shield className="w-5 h-5 text-teal-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-white block mb-0.5">Core Product Principle</strong>
+              GatiAI does not declare a winner or calculate fictitious costs. The application surfaces real candidate routes, mapped environmental constraints, and measured differences. <strong className="text-teal-400">The final planning call belongs to the user.</strong>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 py-8 px-6 lg:px-12 text-center text-xs text-slate-500 bg-[#060911]">
-        <p>GatiAI – PM Gati Shakti AI Infrastructure Planning Platform • Built for National Multi-modal Connectivity</p>
+      <footer className="relative z-10 border-t border-white/[0.08] py-6 px-6 text-center text-xs text-slate-500">
+        <p>GatiAI · Early-Stage Route Screening Assistant · Powered by OpenRouteService, Overpass & Gemini</p>
       </footer>
     </div>
   );

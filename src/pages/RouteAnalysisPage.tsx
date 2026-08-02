@@ -1,187 +1,357 @@
 import React from 'react';
-import { Project, RouteOption } from '../types';
-import { Sparkles, GitCompare, CheckCircle2, ShieldAlert, ArrowRight, DollarSign, Clock, Mountain, Leaf, AlertTriangle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { RouteOption } from '../types';
+import { GitCompare, Trees, Shield, Clock, ArrowLeft, Sparkles, Waves, Database, Info, Layers, Activity, Zap, AlertTriangle } from 'lucide-react';
 
 interface RouteAnalysisPageProps {
-  activeProject: Project;
-  onSelectRoute: (routeId: string) => void;
+  routes: RouteOption[];
+  sourceLabel: string;
+  destLabel: string;
   onOpenPlanner: () => void;
+  onOpenAI: () => void;
+}
+
+function StatPill({
+  label,
+  value,
+  sub,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="glass-card rounded-xl px-3.5 py-3 flex flex-col gap-0.5 min-w-[110px]">
+      <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{label}</div>
+      <div className={`text-base font-bold leading-tight ${accent ? 'text-teal-400' : 'text-white'}`}>
+        {value}
+      </div>
+      {sub && <div className="text-[10px] text-slate-400">{sub}</div>}
+    </div>
+  );
+}
+
+function RoutePanel({ route, label }: { route: RouteOption; label: string }) {
+  const riverCount = route.riverCrossingCount ?? route.riverCrossings?.length ?? 0;
+  const pipelineCount = route.pipelineCrossingCount ?? 0;
+  const cableCount = route.undergroundCableCrossingCount ?? 0;
+  const durationHrs = Math.floor(route.durationMinutes / 60);
+  const durationMins = route.durationMinutes % 60;
+
+  return (
+    <div className="glass-card rounded-2xl p-5 flex flex-col gap-4 border border-white/[0.08]">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-3.5 h-3.5 rounded-full shrink-0 ring-2 ring-white/10"
+          style={{ backgroundColor: route.color }}
+        />
+        <div>
+          <div className="text-xs text-slate-400 font-medium">{label}</div>
+          <div className="text-sm font-semibold text-white">{route.name}</div>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <StatPill
+          label="Distance"
+          value={`${route.distanceKm.toFixed(0)} km`}
+          accent
+        />
+        <StatPill
+          label="Est. duration"
+          value={`${durationHrs}h ${durationMins}m`}
+        />
+        <StatPill
+          label="Forest features"
+          value={`${route.forestFeatureCount}`}
+          sub={`Forest overlap: ~${route.forestOverlapKm.toFixed(1)} km`}
+        />
+        <StatPill
+          label="Protected areas"
+          value={`${route.protectedAreaFeatureCount}`}
+          sub={`Protected overlap: ~${route.protectedOverlapKm.toFixed(1)} km`}
+        />
+        <StatPill
+          label="River crossings"
+          value={`${riverCount}`}
+          sub="Line intersections"
+        />
+        <StatPill
+          label="Mapped pipelines"
+          value={`${pipelineCount}`}
+          sub="Pipeline intersections"
+        />
+        <StatPill
+          label="Underground cables"
+          value={`${cableCount}`}
+          sub="Power cable intersections"
+        />
+      </div>
+
+      {/* Summary Text */}
+      <div className="rounded-xl px-3.5 py-3 glass-light border border-white/[0.07] flex items-start gap-2.5">
+        <Layers className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Intersects {route.forestFeatureCount} mapped forest {route.forestFeatureCount === 1 ? 'feature' : 'features'} and {route.protectedAreaFeatureCount} mapped protected-area {route.protectedAreaFeatureCount === 1 ? 'feature' : 'features'}. {riverCount} mapped river {riverCount === 1 ? 'crossing' : 'crossings'}. {pipelineCount} mapped pipeline {pipelineCount === 1 ? 'intersection' : 'intersections'} and {cableCount} mapped underground power-cable {cableCount === 1 ? 'intersection' : 'intersections'}.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export const RouteAnalysisPage: React.FC<RouteAnalysisPageProps> = ({
-  activeProject,
-  onSelectRoute,
+  routes,
+  sourceLabel,
+  destLabel,
   onOpenPlanner,
+  onOpenAI,
 }) => {
-  const routes = activeProject.routes;
-
-  const chartData = routes.map((r) => ({
-    name: r.name.split(':')[0],
-    Cost: r.estimatedCostCrores,
-    Distance: r.distanceKm,
-    EcoScore: r.environmentalImpactScore,
-    DelayRisk: r.delayProbability,
-  }));
-
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0c121d] p-6 rounded-2xl border border-slate-800 shadow-xl">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30 mb-2">
-            <GitCompare className="w-3.5 h-3.5" /> Multi-Metric Route Rationale Engine
-          </div>
-          <h1 className="text-2xl font-black text-white">{activeProject.title}</h1>
-          <p className="text-xs text-slate-400">Comparing {routes.length} generated route alignments across PM Gati Shakti decision parameters</p>
-        </div>
-
+  if (routes.length === 0) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-4 text-center px-6">
+        <GitCompare className="w-10 h-10 text-slate-600" />
+        <h2 className="text-lg font-semibold text-white">No route data loaded</h2>
+        <p className="text-sm text-slate-400 max-w-sm">
+          Go to the Map Planner, pick two cities, and click "Find Routes". Then come back here for measured GIS infrastructure screening.
+        </p>
         <button
           onClick={onOpenPlanner}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center gap-1.5"
+          className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg transition-all cursor-pointer"
         >
-          View on GIS Map <ArrowRight className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Planner
         </button>
       </div>
+    );
+  }
 
-      {/* Comparison Table */}
-      <div className="bg-[#0c121d] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-slate-800 bg-[#080b12] font-bold text-sm text-white flex items-center justify-between">
-          <span>Comparative Matrix</span>
-          <span className="text-xs text-slate-400">Lower Eco Impact & Lower Delay Risk is Preferred</span>
+  const [routeA, routeB] = routes;
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] p-6 max-w-5xl mx-auto space-y-6">
+
+      {/* Header */}
+      <div className="glass-card rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-4 border border-white/[0.08]">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <GitCompare className="w-4 h-4 text-teal-400" />
+            <span className="text-xs text-teal-400 font-semibold uppercase tracking-wider">Route Comparison & Infrastructure Screening</span>
+          </div>
+          <h1 className="text-xl font-bold text-white leading-tight">
+            {sourceLabel.split('(')[0].trim()} → {destLabel.split('(')[0].trim()}
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Measured environmental & mapped utility infrastructure intersections (Pipelines & Underground Power Cables)
+          </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#080b12] text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-800">
-                <th className="p-3.5">Route Option</th>
-                <th className="p-3.5">Distance</th>
-                <th className="p-3.5">Est. Cost</th>
-                <th className="p-3.5">Timeline</th>
-                <th className="p-3.5">Terrain</th>
-                <th className="p-3.5">Eco Score</th>
-                <th className="p-3.5">Delay Risk</th>
-                <th className="p-3.5">Conflicts</th>
-                <th className="p-3.5 text-center">AI Rating</th>
-                <th className="p-3.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {routes.map((rt) => {
-                const isSelected = rt.id === activeProject.selectedRouteId;
-                return (
-                  <tr
-                    key={rt.id}
-                    className={`transition-colors ${
-                      isSelected ? 'bg-blue-600/10 font-medium' : 'hover:bg-slate-800/40'
-                    }`}
-                  >
-                    <td className="p-3.5">
-                      <div className="font-bold text-white flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rt.color }} />
-                        {rt.name}
-                      </div>
-                      <div className="text-[10px] text-slate-400 line-clamp-1">{rt.recommendationReason}</div>
-                    </td>
-
-                    <td className="p-3.5 font-bold text-slate-200">{rt.distanceKm} km</td>
-
-                    <td className="p-3.5 font-bold text-emerald-400">
-                      ₹{rt.estimatedCostCrores.toLocaleString('en-IN')} Cr
-                    </td>
-
-                    <td className="p-3.5 text-slate-300">{rt.constructionMonths} Mos</td>
-
-                    <td className="p-3.5 text-amber-300 font-semibold">{rt.terrainDifficulty}</td>
-
-                    <td className="p-3.5 font-bold text-emerald-400">{rt.environmentalImpactScore}/100</td>
-
-                    <td className="p-3.5 font-bold text-rose-400">{rt.delayProbability}%</td>
-
-                    <td className="p-3.5">
-                      {rt.conflicts.length > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          <AlertTriangle className="w-3 h-3" /> {rt.conflicts.length}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          <CheckCircle2 className="w-3 h-3" /> None
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="p-3.5 text-center">
-                      <span className="font-extrabold text-xs text-blue-400">{rt.confidenceScore}%</span>
-                    </td>
-
-                    <td className="p-3.5 text-right">
-                      <button
-                        onClick={() => {
-                          onSelectRoute(rt.id);
-                          onOpenPlanner();
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-md'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                        }`}
-                      >
-                        {isSelected ? 'Selected' : 'Select'}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="flex gap-2">
+          <button
+            onClick={onOpenPlanner}
+            className="flex items-center gap-1.5 px-3.5 py-2 glass-light border border-white/[0.09] text-slate-300 hover:text-white text-xs font-medium rounded-lg transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> GIS Map Layers
+          </button>
+          <button
+            onClick={onOpenAI}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-teal-950/40 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Explain Tradeoff
+          </button>
         </div>
       </div>
 
-      {/* Visual Analytics Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Cost vs Distance Chart */}
-        <div className="p-5 rounded-2xl bg-[#0c121d] border border-slate-800 space-y-3 shadow-xl">
-          <h3 className="font-bold text-sm text-white flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-emerald-400" /> Capital Cost Comparison (₹ Crores)
-          </h3>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
-                <YAxis stroke="#64748b" fontSize={10} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0c121d', borderColor: '#1e293b', borderRadius: '0.75rem', fontSize: '12px', color: '#f8fafc' }}
-                />
-                <Bar dataKey="Cost" fill="#10b981" radius={[8, 8, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 1 ? '#10b981' : '#2563eb'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      {/* SECTION 1: MEASURED FROM LIVE GIS DATA */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-white/[0.07] pb-2">
+          <h2 className="text-xs font-bold text-teal-400 uppercase tracking-widest flex items-center gap-2">
+            <Database className="w-4 h-4 text-teal-400" />
+            Measured from live GIS data
+          </h2>
+          <span className="text-[10px] text-slate-400 font-medium">OpenStreetMap & ORS API</span>
+        </div>
+
+        {/* Side-by-side route panels */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {routeA && <RoutePanel route={routeA} label="Route A" />}
+          {routeB && <RoutePanel route={routeB} label="Route B" />}
+        </div>
+
+        {/* ROUTE CONSTRAINTS SECTION (Requirement #14) */}
+        {routeA && routeB && (
+          <div className="glass-card rounded-2xl p-5 border border-white/[0.08] space-y-4">
+            <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/[0.07] pb-2">
+              <Layers className="w-4 h-4 text-teal-400" />
+              ROUTE CONSTRAINTS SUMMARY
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Route A Constraints */}
+              <div className="glass-light p-4 rounded-xl border border-white/[0.06] space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-teal-400 border-b border-white/[0.05] pb-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-teal-400" />
+                  <span>Route A Constraints</span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-300">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Environmental Constraints</div>
+                  <div className="flex items-center gap-2"><Trees className="w-3.5 h-3.5 text-emerald-400" /> {routeA.forestFeatureCount} forest features</div>
+                  <div className="flex items-center gap-2"><Shield className="w-3.5 h-3.5 text-amber-400" /> {routeA.protectedAreaFeatureCount} protected areas</div>
+                  <div className="flex items-center gap-2"><Waves className="w-3.5 h-3.5 text-sky-400" /> {routeA.riverCrossingCount ?? 0} river crossings</div>
+
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2 border-t border-white/[0.05]">Existing Infrastructure Constraints</div>
+                  <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-amber-400" /> {routeA.pipelineCrossingCount ?? 0} mapped pipelines</div>
+                  <div className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-purple-400" /> {routeA.undergroundCableCrossingCount ?? 0} underground power cables</div>
+                </div>
+              </div>
+
+              {/* Route B Constraints */}
+              <div className="glass-light p-4 rounded-xl border border-white/[0.06] space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-400 border-b border-white/[0.05] pb-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span>Route B Constraints</span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-300">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Environmental Constraints</div>
+                  <div className="flex items-center gap-2"><Trees className="w-3.5 h-3.5 text-emerald-400" /> {routeB.forestFeatureCount} forest features</div>
+                  <div className="flex items-center gap-2"><Shield className="w-3.5 h-3.5 text-amber-400" /> {routeB.protectedAreaFeatureCount} protected areas</div>
+                  <div className="flex items-center gap-2"><Waves className="w-3.5 h-3.5 text-sky-400" /> {routeB.riverCrossingCount ?? 0} river crossings</div>
+
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2 border-t border-white/[0.05]">Existing Infrastructure Constraints</div>
+                  <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-amber-400" /> {routeB.pipelineCrossingCount ?? 0} mapped pipelines</div>
+                  <div className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-purple-400" /> {routeB.undergroundCableCrossingCount ?? 0} underground power cables</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AT A GLANCE COMPARISON MATRIX (Requirements #13 & #18) */}
+        {routeA && routeB && (
+          <div className="glass-card rounded-2xl overflow-hidden border border-white/[0.08]">
+            <div className="px-5 py-3 border-b border-white/[0.07] glass-light flex items-center justify-between">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <GitCompare className="w-4 h-4 text-teal-400" />
+                AT A GLANCE
+              </h3>
+            </div>
+            <div className="divide-y divide-white/[0.05]">
+              {[
+                {
+                  label: 'Distance',
+                  a: `${routeA.distanceKm.toFixed(0)} km`,
+                  b: `${routeB.distanceKm.toFixed(0)} km`,
+                  icon: Clock,
+                },
+                {
+                  label: 'Travel time',
+                  a: `${Math.floor(routeA.durationMinutes / 60)}h ${routeA.durationMinutes % 60}m`,
+                  b: `${Math.floor(routeB.durationMinutes / 60)}h ${routeB.durationMinutes % 60}m`,
+                  icon: Clock,
+                },
+                {
+                  label: 'Forest features',
+                  a: `${routeA.forestFeatureCount}`,
+                  b: `${routeB.forestFeatureCount}`,
+                  icon: Trees,
+                },
+                {
+                  label: 'Protected areas',
+                  a: `${routeA.protectedAreaFeatureCount}`,
+                  b: `${routeB.protectedAreaFeatureCount}`,
+                  icon: Shield,
+                },
+                {
+                  label: 'River crossings',
+                  a: `${routeA.riverCrossingCount ?? 0}`,
+                  b: `${routeB.riverCrossingCount ?? 0}`,
+                  icon: Waves,
+                },
+                {
+                  label: 'Pipelines',
+                  a: `${routeA.pipelineCrossingCount ?? 0}`,
+                  b: `${routeB.pipelineCrossingCount ?? 0}`,
+                  icon: Activity,
+                },
+                {
+                  label: 'Underground cables',
+                  a: `${routeA.undergroundCableCrossingCount ?? 0}`,
+                  b: `${routeB.undergroundCableCrossingCount ?? 0}`,
+                  icon: Zap,
+                },
+              ].map(({ label, a, b, icon: Icon }) => (
+                <div key={label} className="flex items-center px-5 py-3 text-xs">
+                  <div className="flex items-center gap-2 text-slate-400 w-44 shrink-0 font-medium">
+                    <Icon className="w-3.5 h-3.5 text-slate-500" />
+                    {label}
+                  </div>
+                  <div className="flex-1 font-semibold text-slate-200">{a}</div>
+                  <div className="flex-1 font-semibold text-slate-200">{b}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FIELD VERIFICATION WARNING (Requirement #20) */}
+      <div className="glass-card rounded-xl p-4 border border-amber-500/30 flex items-start gap-3 bg-amber-500/[0.04]">
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-200/90 leading-relaxed">
+          <strong>Field Verification Warning:</strong> Mapped utility intersections should be verified through authoritative utility records and field surveys before construction or final route selection.
+        </div>
+      </div>
+
+      {/* DATA SOURCES & PUBLIC GIS COVERAGE (Requirements #19 & #21) */}
+      <div className="grid md:grid-cols-2 gap-4 pt-2">
+        {/* Data Sources Labels */}
+        <div className="glass-card rounded-2xl p-4 border border-white/[0.07] space-y-2">
+          <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <Database className="w-3.5 h-3.5 text-teal-400" /> DATA SOURCES
+          </div>
+          <div className="space-y-1 text-xs text-slate-300">
+            <div className="flex justify-between py-1 border-b border-white/[0.05]">
+              <span className="text-slate-400">Routing</span>
+              <span className="font-semibold text-slate-200">OpenRouteService</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-white/[0.05]">
+              <span className="text-slate-400">Place Search</span>
+              <span className="font-semibold text-slate-200">OpenStreetMap / Nominatim</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-white/[0.05]">
+              <span className="text-slate-400">Environmental Features</span>
+              <span className="font-semibold text-slate-200">OpenStreetMap / Overpass</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-white/[0.05]">
+              <span className="text-slate-400">Utility Infrastructure</span>
+              <span className="font-semibold text-slate-200">OpenStreetMap / Overpass</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-slate-400">AI Explanation</span>
+              <span className="font-semibold text-slate-200">Google Gemini</span>
+            </div>
           </div>
         </div>
 
-        {/* Delay Risk Probability */}
-        <div className="p-5 rounded-2xl bg-[#0c121d] border border-slate-800 space-y-3 shadow-xl">
-          <h3 className="font-bold text-sm text-white flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-rose-400" /> Delay Probability (%)
-          </h3>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
-                <YAxis stroke="#64748b" fontSize={10} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0c121d', borderColor: '#1e293b', borderRadius: '0.75rem', fontSize: '12px', color: '#f8fafc' }}
-                />
-                <Bar dataKey="DelayRisk" fill="#f43f5e" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Public GIS Coverage Data Quality Indicator */}
+        <div className="glass-card rounded-2xl p-4 border border-white/[0.07] space-y-2 flex flex-col justify-between">
+          <div>
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <Info className="w-3.5 h-3.5 text-amber-400" /> PUBLIC GIS COVERAGE
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Utility data reflects publicly mapped OpenStreetMap features and may be incomplete, especially for underground infrastructure.
+            </p>
+          </div>
+          <div className="text-[10px] text-slate-500 pt-2 border-t border-white/[0.05]">
+            GatiAI Screening Assistant · Fact-based GIS Evaluation
           </div>
         </div>
       </div>
+
     </div>
   );
 };

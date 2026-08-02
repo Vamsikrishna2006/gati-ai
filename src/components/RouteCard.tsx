@@ -1,124 +1,111 @@
 import React from 'react';
 import { RouteOption } from '../types';
-import { Sparkles, ShieldAlert, CheckCircle, Clock, DollarSign, Mountain, Leaf, AlertTriangle } from 'lucide-react';
+import { Clock, Navigation, Trees, Shield, Waves, Zap, Activity } from 'lucide-react';
 
 interface RouteCardProps {
   route: RouteOption;
   isSelected: boolean;
   onSelect: () => void;
-  onViewConflicts: () => void;
 }
 
 export const RouteCard: React.FC<RouteCardProps> = ({
   route,
   isSelected,
   onSelect,
-  onViewConflicts,
 }) => {
+  const riverCount = route.riverCrossingCount ?? route.riverCrossings?.length ?? 0;
+  const pipelineCount = route.pipelineCrossingCount ?? 0;
+  const cableCount = route.undergroundCableCrossingCount ?? 0;
+
   return (
     <div
       onClick={onSelect}
-      className={`relative p-4 rounded-xl transition-all cursor-pointer border select-none ${
+      className={`glass-card rounded-2xl p-4 transition-all duration-300 cursor-pointer relative overflow-hidden border ${
         isSelected
-          ? 'bg-[#0c121d] border-blue-500/80 shadow-xl shadow-blue-950/40 ring-1 ring-blue-500/40'
-          : 'bg-[#0c121d]/70 border-slate-800 hover:border-slate-700 hover:bg-[#0c121d]'
+          ? 'border-teal-500/50 shadow-lg shadow-teal-950/30 ring-1 ring-teal-500/30'
+          : 'border-white/[0.08] hover:border-white/20'
       }`}
     >
-      {/* Top Header & AI Recommendation Badge */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      {/* Accent strip */}
+      <div
+        className="absolute top-0 left-0 right-0 h-1"
+        style={{ backgroundColor: route.color }}
+      />
+
+      <div className="flex items-center justify-between mb-3 pt-1">
         <div className="flex items-center gap-2">
           <div
-            className="w-3.5 h-3.5 rounded-full shrink-0"
+            className="w-3 h-3 rounded-full shadow-sm"
             style={{ backgroundColor: route.color }}
           />
-          <h4 className="font-bold text-sm text-white leading-tight">{route.name}</h4>
+          <h3 className="font-bold text-white text-sm tracking-wide">{route.name}</h3>
         </div>
-
-        {route.isRecommended && (
-          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-600/20 text-blue-300 border border-blue-500/40 animate-pulse">
-            <Sparkles className="w-3 h-3 text-blue-400" /> AI Choice ({route.confidenceScore}%)
+        {isSelected && (
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-400 border border-teal-500/30">
+            Selected
           </span>
         )}
       </div>
 
-      {/* Rationale text */}
-      <p className="text-xs text-slate-300 line-clamp-2 mb-3 bg-[#080b12] p-2 rounded-lg border border-slate-800/80">
-        {route.recommendationReason}
-      </p>
-
-      {/* Grid Metrics */}
-      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-        <div className="bg-[#080b12] p-2 rounded-lg border border-slate-800">
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="glass-light p-2.5 rounded-xl border border-white/[0.05]">
           <div className="text-[10px] text-slate-400 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-blue-400" /> Length & Time
+            <Navigation className="w-3 h-3 text-teal-400" /> Distance
           </div>
-          <div className="font-bold text-slate-100 text-sm mt-0.5">
-            {route.distanceKm} km <span className="text-xs font-normal text-slate-400">({route.constructionMonths}m)</span>
-          </div>
+          <div className="text-sm font-bold text-white mt-0.5">{route.distanceKm.toFixed(0)} km</div>
         </div>
 
-        <div className="bg-[#080b12] p-2 rounded-lg border border-slate-800">
+        <div className="glass-light p-2.5 rounded-xl border border-white/[0.05]">
           <div className="text-[10px] text-slate-400 flex items-center gap-1">
-            <DollarSign className="w-3 h-3 text-emerald-400" /> Capital Outlay
+            <Clock className="w-3 h-3 text-amber-400" /> Est. Duration
           </div>
-          <div className="font-bold text-slate-100 text-sm mt-0.5">
-            ₹{route.estimatedCostCrores.toLocaleString('en-IN')} <span className="text-[10px] font-normal text-slate-400">Cr</span>
-          </div>
-        </div>
-
-        <div className="bg-[#080b12] p-2 rounded-lg border border-slate-800">
-          <div className="text-[10px] text-slate-400 flex items-center gap-1">
-            <Leaf className="w-3 h-3 text-emerald-400" /> Eco Impact
-          </div>
-          <div className="font-bold text-emerald-400 text-xs mt-0.5">
-            {route.environmentalImpactScore}/100 <span className="text-[10px] font-normal text-slate-400">(Score)</span>
-          </div>
-        </div>
-
-        <div className="bg-[#080b12] p-2 rounded-lg border border-slate-800">
-          <div className="text-[10px] text-slate-400 flex items-center gap-1">
-            <Mountain className="w-3 h-3 text-amber-400" /> Terrain
-          </div>
-          <div className="font-bold text-amber-300 text-xs mt-0.5">
-            {route.terrainDifficulty}
+          <div className="text-sm font-bold text-white mt-0.5">
+            {Math.floor(route.durationMinutes / 60)}h {route.durationMinutes % 60}m
           </div>
         </div>
       </div>
 
-      {/* Bottom Footer: Conflict warnings count & select button */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewConflicts();
-          }}
-          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-            route.conflicts.length > 0
-              ? 'bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30'
-              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-          }`}
-        >
-          {route.conflicts.length > 0 ? (
-            <>
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-              <span>{route.conflicts.length} Intersections Found</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Zero High-Risk Conflicts</span>
-            </>
-          )}
-        </button>
+      {/* Environmental & Utility Infrastructure Metrics */}
+      <div className="mt-3 pt-2.5 border-t border-white/[0.06] space-y-1.5 text-[11px] text-slate-300">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <Trees className="w-3.5 h-3.5 text-emerald-400" /> Forest features:
+          </span>
+          <span className="font-semibold text-white">
+            {route.forestFeatureCount} <span className="text-[10px] text-slate-400">(~{route.forestOverlapKm.toFixed(1)} km)</span>
+          </span>
+        </div>
 
-        <span className={`text-xs font-bold px-3 py-1 rounded-lg transition-colors ${
-          isSelected
-            ? 'bg-gradient-to-r from-blue-600 to-emerald-600 text-white shadow-md'
-            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-        }`}>
-          {isSelected ? 'Selected' : 'Select Route'}
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <Shield className="w-3.5 h-3.5 text-amber-400" /> Protected areas:
+          </span>
+          <span className="font-semibold text-white">
+            {route.protectedAreaFeatureCount} <span className="text-[10px] text-slate-400">(~{route.protectedOverlapKm.toFixed(1)} km)</span>
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <Waves className="w-3.5 h-3.5 text-sky-400" /> River crossings:
+          </span>
+          <span className="font-semibold text-white">{riverCount}</span>
+        </div>
+
+        <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <Activity className="w-3.5 h-3.5 text-amber-400" /> Mapped pipelines:
+          </span>
+          <span className="font-semibold text-white">{pipelineCount}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <Zap className="w-3.5 h-3.5 text-purple-400" /> Underground cables:
+          </span>
+          <span className="font-semibold text-white">{cableCount}</span>
+        </div>
       </div>
     </div>
   );

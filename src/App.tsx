@@ -1,186 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { User, Project } from './types';
-import { SAMPLE_USERS, SAMPLE_PROJECTS } from './data/mockData';
+import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar, ActivePage } from './components/Sidebar';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { MapPlannerPage } from './pages/MapPlannerPage';
 import { RouteAnalysisPage } from './pages/RouteAnalysisPage';
 import { AIAssistantPage } from './pages/AIAssistantPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
+import { DPRReportModal } from './components/DPRReportModal';
+import { RouteOption } from './types';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User>(SAMPLE_USERS[0]);
-  const [currentPage, setCurrentPage] = useState<ActivePage | 'landing' | 'login'>('landing');
-  const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
-  const [activeProject, setActiveProject] = useState<Project>(SAMPLE_PROJECTS[0]);
+  const [currentPage, setCurrentPage] = useState<ActivePage | 'landing'>('landing');
 
-  // Fetch projects from server on mount
-  useEffect(() => {
-    async function loadProjects() {
-      try {
-        const res = await fetch('/api/projects');
-        const data = await res.json();
-        if (data.projects && data.projects.length > 0) {
-          setProjects(data.projects);
-          setActiveProject(data.projects[0]);
-        }
-      } catch (err) {
-        console.warn('Using local sample projects fallback', err);
-      }
-    }
-    loadProjects();
-  }, []);
+  // Shared live route state lifted from MapPlannerPage so analysis + AI pages can consume it
+  const [liveRoutes, setLiveRoutes] = useState<RouteOption[]>([]);
+  const [sourceLabel, setSourceLabel] = useState('');
+  const [destLabel, setDestLabel] = useState('');
+  const [isDPROpen, setIsDPROpen] = useState(false);
 
-  const handleUpdateProjectRoute = (routeId: string) => {
-    const updated = projects.map((p) => {
-      if (p.id === activeProject.id) {
-        return {
-          ...p,
-          selectedRouteId: routeId,
-        };
-      }
-      return p;
-    });
-    setProjects(updated);
-    setActiveProject((prev) => ({ ...prev, selectedRouteId: routeId }));
-
-    // Send patch to server
-    fetch(`/api/projects/${activeProject.id}/select-route`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ routeId }),
-    }).catch((err) => console.warn('Route update failed on backend', err));
-  };
-
-  const handleCreateProject = (newProjData: Partial<Project>) => {
-    const newProj: Project = {
-      id: `proj-${Date.now()}`,
-      code: `PMGS-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      status: 'planning',
-      spentCrores: 0,
-      timelineMonths: 36,
-      startDate: new Date().toISOString().split('T')[0],
-      completionDate: '2028-12-31',
-      riskLevel: 'Medium',
-      riskScore: 35,
-      lastUpdated: new Date().toISOString().split('T')[0],
-      routes: [],
-      description: 'Newly generated PM Gati Shakti multi-modal freight corridor.',
-      title: newProjData.title || 'New Corridor Project',
-      department: newProjData.department || currentUser.department,
-      infrastructureType: newProjData.infrastructureType || 'highway',
-      sourceCity: newProjData.sourceCity || 'Delhi NCR',
-      destinationCity: newProjData.destinationCity || 'Mumbai',
-      sourceCoords: newProjData.sourceCoords || [28.5528, 77.5539],
-      destinationCoords: newProjData.destinationCoords || [18.9500, 72.9500],
-      budgetCrores: newProjData.budgetCrores || 9500,
-      assignedLead: currentUser.name,
-    };
-
-    setProjects((prev) => [newProj, ...prev]);
-    setActiveProject(newProj);
-
-    // Save to backend
-    fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newProj),
-    }).catch((err) => console.warn('Failed to save project to backend', err));
-  };
-
-  const selectedRoute =
-    activeProject.routes.find((r) => r.id === activeProject.selectedRouteId) ||
-    activeProject.routes[0];
-
-  // Render standalone Landing or Login page
   if (currentPage === 'landing') {
-    return (
-      <LandingPage
-        onStartPlanner={() => setCurrentPage('map')}
-        onLogin={() => setCurrentPage('login')}
-      />
-    );
-  }
-
-  if (currentPage === 'login') {
-    return (
-      <LoginPage
-        onLoginSuccess={(usr) => {
-          setCurrentUser(usr);
-          setCurrentPage('dashboard');
-        }}
-        onBackToLanding={() => setCurrentPage('landing')}
-      />
-    );
+    return <LandingPage onStartPlanner={() => setCurrentPage('map')} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-ambient-mesh text-slate-100 flex flex-col relative selection:bg-teal-500 selection:text-slate-950" style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Background glowing ambient light spots */}
+      <div className="bg-glow-teal top-10 left-1/4" />
+      <div className="bg-glow-amber bottom-20 right-10" />
+
       <Navbar
-        currentUser={currentUser}
-        onSelectUser={(usr) => setCurrentUser(usr)}
-        onOpenLogin={() => setCurrentPage('login')}
-        activeProjectCode={activeProject.code}
+        onNavigate={(p) => setCurrentPage(p as ActivePage)}
+        onOpenDPR={() => setIsDPROpen(true)}
       />
 
-      {/* Main Body split into Sidebar + Workspace Page */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative z-10">
         <Sidebar
-          activePage={currentPage}
+          activePage={currentPage as ActivePage}
           onNavigate={(page) => setCurrentPage(page)}
-          onOpenLogin={() => setCurrentPage('login')}
         />
 
-        <main className="flex-1 overflow-y-auto bg-slate-950">
-          {currentPage === 'dashboard' && (
-            <DashboardPage
-              projects={projects}
-              currentUser={currentUser}
-              onSelectProject={(proj) => setActiveProject(proj)}
-              onOpenPlanner={() => setCurrentPage('map')}
-              onCreateProject={handleCreateProject}
-            />
-          )}
-
+        <main className="flex-1 overflow-y-auto bg-transparent relative">
           {currentPage === 'map' && (
             <MapPlannerPage
-              activeProject={activeProject}
-              onUpdateProjectRoute={handleUpdateProjectRoute}
-              onOpenAIAssistant={() => setCurrentPage('ai_assistant')}
+              onRoutesReady={(routes, src, dest) => {
+                setLiveRoutes(routes);
+                setSourceLabel(src);
+                setDestLabel(dest);
+              }}
+              onOpenAnalysis={() => setCurrentPage('analysis')}
             />
           )}
 
           {currentPage === 'analysis' && (
             <RouteAnalysisPage
-              activeProject={activeProject}
-              onSelectRoute={handleUpdateProjectRoute}
+              routes={liveRoutes}
+              sourceLabel={sourceLabel}
+              destLabel={destLabel}
               onOpenPlanner={() => setCurrentPage('map')}
+              onOpenAI={() => setCurrentPage('ai_assistant')}
             />
           )}
 
           {currentPage === 'ai_assistant' && (
             <AIAssistantPage
-              activeProject={activeProject}
-              selectedRoute={selectedRoute}
+              routes={liveRoutes}
+              sourceLabel={sourceLabel}
+              destLabel={destLabel}
             />
           )}
-
-          {currentPage === 'analytics' && <AnalyticsPage projects={projects} />}
-
-          {currentPage === 'reports' && <ReportsPage projects={projects} />}
-
-          {currentPage === 'settings' && <SettingsPage />}
 
           {currentPage === 'about' && <AboutPage />}
         </main>
       </div>
+
+      {/* DPR Executive Report PDF Export Modal */}
+      <DPRReportModal
+        isOpen={isDPROpen}
+        onClose={() => setIsDPROpen(false)}
+        routes={liveRoutes}
+        sourceLabel={sourceLabel}
+        destLabel={destLabel}
+      />
     </div>
   );
 }

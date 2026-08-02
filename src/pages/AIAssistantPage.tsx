@@ -1,167 +1,222 @@
 import React, { useState } from 'react';
-import { Project, RouteOption, AIChatMessage } from '../types';
-import { Bot, Send, Sparkles, User, RefreshCw, HelpCircle, Layers, CheckCircle2 } from 'lucide-react';
+import { RouteOption } from '../types';
+import { Sparkles, Loader2, Trees, Shield, Clock, RefreshCw, Activity, Zap } from 'lucide-react';
 
 interface AIAssistantPageProps {
-  activeProject: Project;
-  selectedRoute: RouteOption;
+  routes: RouteOption[];
+  sourceLabel: string;
+  destLabel: string;
 }
 
-export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({ activeProject, selectedRoute }) => {
-  const [messages, setMessages] = useState<AIChatMessage[]>([
-    {
-      id: 'msg-1',
-      sender: 'assistant',
-      text: `Hello! I am your PM Gati Shakti AI Master Planner. I have cross-analyzed spatial GIS layers for "${activeProject.title}".\n\nRoute B is currently prioritized with a 96% AI confidence score because it avoids core eco-sensitive forests and lowers delay risk from 24% to 11%.\n\nHow can I help you refine this corridor?`,
-      timestamp: 'Just now',
-    },
-  ]);
-  const [input, setInput] = useState('');
+export const AIAssistantPage: React.FC<AIAssistantPageProps> = ({
+  routes,
+  sourceLabel,
+  destLabel,
+}) => {
+  const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const quickPrompts = [
-    'Why is Route B recommended over Route A?',
-    'How do we minimize forest clearing in tiger corridors?',
-    'Explain the land acquisition complexity for this route.',
-    'Compare freight transit time vs highway cost.',
-    'Summarize inter-departmental clearance steps.',
-  ];
+  const hasRoutes = routes.length >= 2;
+  const [routeA, routeB] = routes;
 
-  const handleSend = async (textToSend?: string) => {
-    const query = textToSend || input;
-    if (!query.trim() || loading) return;
-
-    const userMsg: AIChatMessage = {
-      id: `usr-${Date.now()}`,
-      sender: 'user',
-      text: query,
-      timestamp: 'Just now',
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setInput('');
+  const handleExplain = async () => {
+    if (!hasRoutes || loading) return;
     setLoading(true);
+    setError(null);
+    setExplanation(null);
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch('/api/ai/explain-tradeoff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: query,
-          currentProject: activeProject,
-          currentRoute: selectedRoute,
+          sourceLabel,
+          destLabel,
+          routeA: {
+            name: routeA.name,
+            distanceKm: routeA.distanceKm,
+            durationMinutes: routeA.durationMinutes,
+            forestFeatureCount: routeA.forestFeatureCount,
+            protectedAreaFeatureCount: routeA.protectedAreaFeatureCount,
+            forestOverlapKm: routeA.forestOverlapKm,
+            protectedOverlapKm: routeA.protectedOverlapKm,
+            riverCrossingCount: routeA.riverCrossingCount,
+            pipelineCrossingCount: routeA.pipelineCrossingCount,
+            undergroundCableCrossingCount: routeA.undergroundCableCrossingCount,
+          },
+          routeB: {
+            name: routeB.name,
+            distanceKm: routeB.distanceKm,
+            durationMinutes: routeB.durationMinutes,
+            forestFeatureCount: routeB.forestFeatureCount,
+            protectedAreaFeatureCount: routeB.protectedAreaFeatureCount,
+            forestOverlapKm: routeB.forestOverlapKm,
+            protectedOverlapKm: routeB.protectedOverlapKm,
+            riverCrossingCount: routeB.riverCrossingCount,
+            pipelineCrossingCount: routeB.pipelineCrossingCount,
+            undergroundCableCrossingCount: routeB.undergroundCableCrossingCount,
+          },
         }),
       });
 
       const data = await res.json();
-      const botMsg: AIChatMessage = {
-        id: `bot-${Date.now()}`,
-        sender: 'assistant',
-        text: data.reply || 'Analysis completed.',
-        timestamp: 'Just now',
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    } catch (err) {
-      console.error('AI Assistant Error', err);
-      const errorMsg: AIChatMessage = {
-        id: `err-${Date.now()}`,
-        sender: 'assistant',
-        text: 'Temporary communication issue with GatiAI model. Please retry.',
-        timestamp: 'Just now',
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      if (data.explanation) {
+        setExplanation(data.explanation);
+      } else if (data.error) {
+        setError(data.error);
+      } else {
+        setError('Unable to fetch AI explanation. Using instant tradeoff summary.');
+      }
+    } catch (err: any) {
+      console.error('AI call error:', err);
+      const shorter = routeA.distanceKm <= routeB.distanceKm ? 'Route A' : 'Route B';
+      const lessEnv =
+        (routeA.forestFeatureCount + routeA.protectedAreaFeatureCount) <=
+        (routeB.forestFeatureCount + routeB.protectedAreaFeatureCount)
+          ? 'Route A'
+          : 'Route B';
+
+      setExplanation(
+        `Route A measures ${routeA.distanceKm.toFixed(0)} km with ${routeA.forestFeatureCount} mapped forest features and ${routeA.pipelineCrossingCount ?? 0} mapped pipeline intersections. Route B measures ${routeB.distanceKm.toFixed(0)} km with ${routeB.forestFeatureCount} mapped forest features and ${routeB.pipelineCrossingCount ?? 0} mapped pipeline intersections. These mapped infrastructure findings warrant further field verification.`
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] p-6 max-w-5xl mx-auto flex flex-col space-y-4 bg-[#080b12]">
+    <div className="min-h-[calc(100vh-4rem)] p-6 max-w-4xl mx-auto space-y-5 relative z-10 font-sans">
+
       {/* Header */}
-      <div className="flex items-center justify-between bg-[#0c121d] p-4 rounded-2xl border border-slate-800 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-blue-600 to-emerald-500 rounded-xl text-white font-bold shadow-lg">
-            <Bot className="w-5 h-5 text-white" />
+      <div className="glass-card rounded-2xl p-5 border border-white/[0.09] shadow-xl">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-6 h-6 rounded-md bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
           </div>
-          <div>
-            <h1 className="font-extrabold text-base text-white flex items-center gap-2">
-              GatiAI Master Assistant <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30">Gemini 3.6 Flash</span>
-            </h1>
-            <p className="text-xs text-slate-400">Context: {activeProject.title} ({selectedRoute.name})</p>
+          <span className="text-xs text-amber-400 font-semibold uppercase tracking-wider">Gemini AI</span>
+        </div>
+        <h1 className="text-xl font-bold text-white mb-1">Explain Route Tradeoff</h1>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Give Gemini the measured metrics — distance, duration, forest overlap, river crossings, mapped pipelines, and underground power cables — and it will explain candidate corridor trade-offs in neutral, plain language. No winner declared.
+          <strong className="text-teal-400"> You decide.</strong>
+        </p>
+      </div>
+
+      {/* Route Preview Cards */}
+      {hasRoutes ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          {[routeA, routeB].map((rt, i) => (
+            <div key={rt.id} className="glass-card rounded-2xl p-5 space-y-3 border border-white/[0.08]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: rt.color }} />
+                  <span className="text-xs font-semibold text-white">Route {String.fromCharCode(65 + i)}</span>
+                </div>
+                <span className="text-[10px] text-slate-400">{rt.name}</span>
+              </div>
+
+              {/* Primary metrics */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="glass-light p-2.5 rounded-lg border border-white/[0.05]">
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3 text-teal-400" /> Distance</div>
+                  <div className="font-bold text-white mt-0.5">{rt.distanceKm.toFixed(0)} km</div>
+                </div>
+                <div className="glass-light p-2.5 rounded-lg border border-white/[0.05]">
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1"><Trees className="w-3 h-3 text-emerald-400" /> Forest Overlap</div>
+                  <div className="font-bold text-white mt-0.5">~{rt.forestOverlapKm.toFixed(1)} km</div>
+                </div>
+              </div>
+
+              {/* Utility counts */}
+              <div className="glass-light p-3 rounded-xl border border-white/[0.06] space-y-1 text-xs">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-medium">
+                    <Activity className="w-3.5 h-3.5" /> Mapped pipelines:
+                  </span>
+                  <span className="font-bold text-white">{rt.pipelineCrossingCount ?? 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="flex items-center gap-1.5 text-purple-400 font-medium">
+                    <Zap className="w-3.5 h-3.5" /> Underground cables:
+                  </span>
+                  <span className="font-bold text-white">{rt.undergroundCableCrossingCount ?? 0}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="glass-card rounded-2xl p-8 text-center space-y-3">
+          <Trees className="w-10 h-10 text-teal-400/60 mx-auto" />
+          <p className="text-base text-white font-semibold">No route data loaded yet</p>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Go to Map Planner, pick two cities, and click "Find Routes". Once candidate routes are calculated, Gemini will explain the corridor tradeoffs.
+          </p>
+        </div>
+      )}
+
+      {/* Trigger button */}
+      {hasRoutes && (
+        <button
+          onClick={handleExplain}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-teal-900/40 border border-teal-400/20 cursor-pointer"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Analyzing candidate route tradeoffs with Gemini...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>{explanation ? 'Re-analyze Route Tradeoff' : 'Explain Route Tradeoff'}</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Error display */}
+      {error && (
+        <div className="glass-card border border-rose-500/30 rounded-xl p-4 text-xs text-rose-300">
+          {error}
+        </div>
+      )}
+
+      {/* AI explanation panel */}
+      {explanation && !loading && (
+        <div className="glass-card rounded-2xl p-6 space-y-4 border border-teal-500/20 shadow-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white">Gemini Neutral Tradeoff Explanation</div>
+              <div className="text-[10px] text-slate-400">Based strictly on measured ORS & OpenStreetMap GIS data</div>
+            </div>
+            <button
+              onClick={handleExplain}
+              className="ml-auto p-1.5 glass-light rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
+              title="Regenerate"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="border-t border-white/[0.08] pt-4">
+            <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-normal">
+              {explanation}
+            </p>
+          </div>
+
+          <div className="border-t border-white/[0.08] pt-3">
+            <p className="text-[10px] text-slate-500">
+              This evaluation was generated strictly from measured GIS route metrics and available public OpenStreetMap data. Gemini is constrained from declaring a winner, providing neutral facts for your planning committee.
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Quick Prompt Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-500 font-bold shrink-0 flex items-center gap-1">
-          <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Prompts:
-        </span>
-        {quickPrompts.map((prompt, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSend(prompt)}
-            className="shrink-0 px-3 py-1.5 rounded-xl bg-[#0c121d] hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors text-xs"
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
-
-      {/* Chat Thread Container */}
-      <div className="flex-1 bg-[#0c121d] border border-slate-800 rounded-2xl p-4 overflow-y-auto space-y-4 shadow-2xl">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex items-start gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
-          >
-            <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
-                msg.sender === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-emerald-500 text-slate-950'
-              }`}
-            >
-              {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            </div>
-
-            <div
-              className={`p-4 rounded-2xl max-w-2xl text-xs leading-relaxed ${
-                msg.sender === 'user'
-                  ? 'bg-blue-600/20 border border-blue-500/30 text-blue-100 rounded-tr-none'
-                  : 'bg-[#080b12] border border-slate-800 text-slate-200 rounded-tl-none whitespace-pre-wrap'
-              }`}
-            >
-              {msg.text}
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex items-center gap-2 text-xs text-blue-400 font-semibold p-2">
-            <RefreshCw className="w-4 h-4 animate-spin" /> GatiAI reasoning across spatial datasets...
-          </div>
-        )}
-      </div>
-
-      {/* Input Bar */}
-      <div className="bg-[#0c121d] border border-slate-800 rounded-2xl p-2 flex items-center gap-2 shadow-xl">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Ask GatiAI anything about route trade-offs, environmental risk, or cost optimization..."
-          className="flex-1 bg-transparent border-0 px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
-        />
-        <button
-          onClick={() => handleSend()}
-          disabled={loading || !input.trim()}
-          className="p-2.5 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-blue-900/30 shrink-0"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </div>
+      )}
     </div>
   );
 };
