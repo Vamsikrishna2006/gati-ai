@@ -1,5 +1,13 @@
 # 🏛️ GatiAI – AI Infrastructure Planning Assistant
 
+[![Live Application](https://img.shields.io/badge/Live%20App-https%3A%2F%2Fgati--ai.onrender.com-0d9488?style=for-the-badge&logo=render&logoColor=white)](https://gati-ai.onrender.com)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Vamsikrishna2006%2Fgati--ai-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Vamsikrishna2006/gati-ai)
+
+> 🌐 **Live Web Application URL:** [https://gati-ai.onrender.com](https://gati-ai.onrender.com)  
+> 📁 **GitHub Repository:** [https://github.com/Vamsikrishna2006/gati-ai](https://github.com/Vamsikrishna2006/gati-ai)
+
+---
+
 > **"Real Routes + Real GIS Features + Real Geometric Math + Grounded AI Explanation"**  
 > *Inspired by the PM Gati Shakti National Master Plan for Integrated Multi-Modal Infrastructure.*
 
@@ -10,6 +18,15 @@
 **GatiAI** is an AI-powered early-stage infrastructure corridor screening assistant designed to help government planners, highway engineers, and inter-departmental authorities evaluate candidate highway and railway alignments before ground-breaking occurs.
 
 By cross-checking candidate driving routes against **real OpenStreetMap spatial geometries**—including forest reserves, protected sanctuaries, river systems, mapped gas/oil pipelines, and underground power cables—GatiAI surfaces environmental friction and utility conflicts in **under 30 seconds**.
+
+---
+
+## 🚀 Live Application & Deployment
+
+| Resource | Link | Description |
+| :--- | :--- | :--- |
+| 🌐 **Production App** | [https://gati-ai.onrender.com](https://gati-ai.onrender.com) | Live Web Service hosted on Render |
+| 📁 **GitHub Source Code** | [https://github.com/Vamsikrishna2006/gati-ai](https://github.com/Vamsikrishna2006/gati-ai) | Complete source repository |
 
 ---
 
