@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RouteOption, GISLayerState } from '../types';
-import { Layers, MapPin, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { Layers, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 interface GISMapProps {
   routes: RouteOption[];
@@ -47,13 +47,25 @@ export const GISMap: React.FC<GISMapProps> = ({
   });
 
   const [panelTab, setPanelTab] = useState<'layers' | 'legend' | 'both'>('both');
-  const [panelCollapsed, setPanelCollapsed] = useState<boolean>(false);
+  const [panelCollapsed, setPanelCollapsed] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768;
+  });
+
+  // Auto-collapse on small screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setPanelCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleLayer = (layerKey: keyof GISLayerState) => {
     setLayers((prev) => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
-  // Helper for formatting river crossing titles
   function formatRiverCrossingTitle(name: string): string {
     if (!name) return 'River Crossing';
     const clean = name.replace(/\b(River|Stream|Canal)\b/gi, '').trim();
@@ -63,7 +75,6 @@ export const GISMap: React.FC<GISMapProps> = ({
     return `${clean} River Crossing`;
   }
 
-  // Helper for formatting river name
   function formatRiverName(name: string): string {
     if (!name) return 'Unnamed river';
     const clean = name.replace(/\b(River|Stream|Canal)\b/gi, '').trim();
@@ -372,33 +383,41 @@ export const GISMap: React.FC<GISMapProps> = ({
   }, [routes, selectedRouteId, sourceCoords, destCoords]);
 
   return (
-    <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl">
+    <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl">
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
-      {/* Unified Responsive GIS Sidebar Overlay */}
-      <div className="absolute top-4 left-4 z-20 glass rounded-2xl p-3.5 text-xs max-w-[240px] max-h-[calc(100%-2rem)] overflow-y-auto border border-white/[0.1] shadow-2xl transition-all duration-300">
-        
-        {/* Panel Header & View Tabs */}
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-2.5">
-          <div className="flex items-center gap-1.5 text-slate-200 font-bold">
-            <Layers className="w-3.5 h-3.5 text-teal-400" />
-            <span>GIS PANELS</span>
-          </div>
+      {/* Floating Collapsed Pill Trigger (for Mobile/Small screens) */}
+      {panelCollapsed ? (
+        <button
+          onClick={() => setPanelCollapsed(false)}
+          className="absolute top-3 left-3 z-30 glass rounded-xl px-3 py-2 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-2 border border-white/[0.12] shadow-xl backdrop-blur-md cursor-pointer transition-all active:scale-95"
+        >
+          <Layers className="w-4 h-4 text-teal-400" />
+          <span>GIS Layers & Legend</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+        </button>
+      ) : (
+        /* Expanded Unified Responsive Sidebar Overlay */
+        <div className="absolute top-3 left-3 md:top-4 md:left-4 z-30 glass rounded-2xl p-3 text-xs w-[230px] sm:w-[250px] max-h-[calc(100%-1.5rem)] overflow-y-auto border border-white/[0.1] shadow-2xl transition-all duration-300">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-white/[0.08] pb-1.5 mb-2">
+            <div className="flex items-center gap-1.5 text-slate-200 font-bold text-xs">
+              <Layers className="w-3.5 h-3.5 text-teal-400" />
+              <span>GIS PANELS</span>
+            </div>
 
-          <div className="flex items-center gap-1">
             <button
-              onClick={() => setPanelCollapsed(!panelCollapsed)}
+              onClick={() => setPanelCollapsed(true)}
               className="p-1 rounded glass-light text-slate-400 hover:text-white transition-all cursor-pointer"
-              title={panelCollapsed ? "Expand Panel" : "Minimize Panel"}
+              title="Minimize Panel"
             >
-              {panelCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
 
-        {/* Tab Switcher Pills */}
-        {!panelCollapsed && (
-          <div className="grid grid-cols-3 gap-1 bg-black/30 p-1 rounded-lg border border-white/[0.05] mb-3">
+          {/* View Tabs */}
+          <div className="grid grid-cols-3 gap-1 bg-black/40 p-1 rounded-lg border border-white/[0.05] mb-2.5">
             <button
               onClick={() => setPanelTab('layers')}
               className={`py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
@@ -430,19 +449,17 @@ export const GISMap: React.FC<GISMapProps> = ({
               Both
             </button>
           </div>
-        )}
 
-        {/* Main Content Body */}
-        {!panelCollapsed && (
-          <div className="space-y-3.5">
+          {/* Main Content Body */}
+          <div className="space-y-3">
             {/* GIS Layers Section */}
             {(panelTab === 'layers' || panelTab === 'both') && (
               <div>
-                <div className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>LAYER CONTROLS</span>
+                <div className="text-[9px] font-bold text-teal-400 uppercase tracking-wider mb-1">
+                  LAYER CONTROLS
                 </div>
 
-                <div className="space-y-1.5 text-[11px]">
+                <div className="space-y-1 text-[11px]">
                   <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Routes</div>
                   <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
                     <input
@@ -454,7 +471,7 @@ export const GISMap: React.FC<GISMapProps> = ({
                     <span>Candidate Routes</span>
                   </label>
 
-                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1 border-t border-white/[0.06]">
                     Environmental
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
@@ -497,7 +514,7 @@ export const GISMap: React.FC<GISMapProps> = ({
                     <span>River Crossings (🌊)</span>
                   </label>
 
-                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1 border-t border-white/[0.06]">
                     Existing Infrastructure
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
@@ -535,8 +552,8 @@ export const GISMap: React.FC<GISMapProps> = ({
 
             {/* Map Legend Section */}
             {(panelTab === 'legend' || panelTab === 'both') && (
-              <div className={`${panelTab === 'both' ? 'pt-2.5 border-t border-white/[0.08]' : ''} space-y-1.5 text-slate-300`}>
-                <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">
+              <div className={`${panelTab === 'both' ? 'pt-2 border-t border-white/[0.08]' : ''} space-y-1 text-slate-300`}>
+                <div className="text-[9px] font-bold text-amber-400 uppercase tracking-wider mb-1">
                   MAP LEGEND
                 </div>
                 <div className="text-[9px] font-bold text-slate-500 uppercase">ROUTES</div>
@@ -583,8 +600,8 @@ export const GISMap: React.FC<GISMapProps> = ({
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
