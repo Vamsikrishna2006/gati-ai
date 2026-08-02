@@ -1,56 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { RouteOption, GISLayerState } from '../types';
-import { Layers } from 'lucide-react';
+import { Layers, MapPin, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface GISMapProps {
-  sourceCoords: [number, number];
-  sourceName: string;
-  destCoords: [number, number];
-  destName: string;
   routes: RouteOption[];
   selectedRouteId: string;
-  onSelectRoute: (routeId: string) => void;
-}
-
-function formatRiverCrossingTitle(rawName: string): string {
-  if (!rawName || rawName === 'Unnamed river/waterway' || rawName === 'River Crossing') {
-    return 'River Crossing';
-  }
-  const clean = rawName.trim();
-  if (clean.toLowerCase().endsWith('crossing')) {
-    return clean;
-  }
-  if (clean.toLowerCase().endsWith('river')) {
-    return `${clean} Crossing`;
-  }
-  return `${clean} River Crossing`;
-}
-
-function formatRiverName(rawName: string): string {
-  if (!rawName || rawName === 'Unnamed river/waterway' || rawName === 'River Crossing') {
-    return 'Ganga River';
-  }
-  const clean = rawName.trim();
-  if (clean.toLowerCase().endsWith('river')) {
-    return clean;
-  }
-  return `${clean} River`;
+  onSelectRoute: (id: string) => void;
+  sourceCoords: [number, number];
+  destCoords: [number, number];
+  sourceName?: string;
+  destName?: string;
 }
 
 export const GISMap: React.FC<GISMapProps> = ({
-  sourceCoords,
-  sourceName,
-  destCoords,
-  destName,
   routes,
   selectedRouteId,
   onSelectRoute,
+  sourceCoords,
+  destCoords,
+  sourceName = 'Source',
+  destName = 'Destination',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
-  // Layer groups
   const routeGroupRef = useRef<L.LayerGroup | null>(null);
   const forestGroupRef = useRef<L.LayerGroup | null>(null);
   const protectedGroupRef = useRef<L.LayerGroup | null>(null);
@@ -59,9 +34,7 @@ export const GISMap: React.FC<GISMapProps> = ({
   const pipelineGroupRef = useRef<L.LayerGroup | null>(null);
   const cableGroupRef = useRef<L.LayerGroup | null>(null);
   const utilityIntersectionGroupRef = useRef<L.LayerGroup | null>(null);
-  const markerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // Layer visibility state
   const [layers, setLayers] = useState<GISLayerState>({
     routes: true,
     forests: true,
@@ -73,180 +46,173 @@ export const GISMap: React.FC<GISMapProps> = ({
     utilityIntersections: true,
   });
 
-  const toggleLayer = (key: keyof GISLayerState) => {
-    setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
+  const [panelTab, setPanelTab] = useState<'layers' | 'legend' | 'both'>('both');
+  const [panelCollapsed, setPanelCollapsed] = useState<boolean>(false);
+
+  const toggleLayer = (layerKey: keyof GISLayerState) => {
+    setLayers((prev) => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
-  // Init map
+  // Helper for formatting river crossing titles
+  function formatRiverCrossingTitle(name: string): string {
+    if (!name) return 'River Crossing';
+    const clean = name.replace(/\b(River|Stream|Canal)\b/gi, '').trim();
+    if (!clean || clean.toUpperCase() === 'UNNAMED') {
+      return 'River Crossing';
+    }
+    return `${clean} River Crossing`;
+  }
+
+  // Helper for formatting river name
+  function formatRiverName(name: string): string {
+    if (!name) return 'Unnamed river';
+    const clean = name.replace(/\b(River|Stream|Canal)\b/gi, '').trim();
+    if (!clean || clean.toUpperCase() === 'UNNAMED') {
+      return 'Unnamed river';
+    }
+    return `${clean} River`;
+  }
+
+  // Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
-
-    const midLat = (sourceCoords[0] + destCoords[0]) / 2;
-    const midLng = (sourceCoords[1] + destCoords[1]) / 2;
+    if (mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [midLat, midLng],
-      zoom: 5,
       zoomControl: false,
-    });
+      attributionControl: false,
+    }).setView([20.5937, 78.9629], 5);
 
-    // Dark CartoDB tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }
+    ).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+    routeGroupRef.current = L.layerGroup().addTo(map);
     forestGroupRef.current = L.layerGroup().addTo(map);
     protectedGroupRef.current = L.layerGroup().addTo(map);
     riverGroupRef.current = L.layerGroup().addTo(map);
+    crossingGroupRef.current = L.layerGroup().addTo(map);
     pipelineGroupRef.current = L.layerGroup().addTo(map);
     cableGroupRef.current = L.layerGroup().addTo(map);
-    routeGroupRef.current = L.layerGroup().addTo(map);
-    crossingGroupRef.current = L.layerGroup().addTo(map);
     utilityIntersectionGroupRef.current = L.layerGroup().addTo(map);
-    markerGroupRef.current = L.layerGroup().addTo(map);
 
-    mapInstanceRef.current = map;
-
-    setTimeout(() => map.invalidateSize(), 200);
-
-    const ro = new ResizeObserver(() => map.invalidateSize());
-    if (mapContainerRef.current) ro.observe(mapContainerRef.current);
+    mapRef.current = map;
 
     return () => {
-      ro.disconnect();
       map.remove();
-      mapInstanceRef.current = null;
+      mapRef.current = null;
     };
   }, []);
 
-  // Update visibility of layer groups
+  // Update Layer Visibility
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
+    if (!mapRef.current) return;
+    const map = mapRef.current;
 
-    if (routeGroupRef.current) {
-      if (layers.routes) map.addLayer(routeGroupRef.current);
-      else map.removeLayer(routeGroupRef.current);
-    }
-    if (forestGroupRef.current) {
-      if (layers.forests) map.addLayer(forestGroupRef.current);
-      else map.removeLayer(forestGroupRef.current);
-    }
-    if (protectedGroupRef.current) {
-      if (layers.protectedAreas) map.addLayer(protectedGroupRef.current);
-      else map.removeLayer(protectedGroupRef.current);
-    }
-    if (riverGroupRef.current) {
-      if (layers.rivers) map.addLayer(riverGroupRef.current);
-      else map.removeLayer(riverGroupRef.current);
-    }
-    if (crossingGroupRef.current) {
-      if (layers.riverCrossings) map.addLayer(crossingGroupRef.current);
-      else map.removeLayer(crossingGroupRef.current);
-    }
-    if (pipelineGroupRef.current) {
-      if (layers.pipelines) map.addLayer(pipelineGroupRef.current);
-      else map.removeLayer(pipelineGroupRef.current);
-    }
-    if (cableGroupRef.current) {
-      if (layers.undergroundCables) map.addLayer(cableGroupRef.current);
-      else map.removeLayer(cableGroupRef.current);
-    }
-    if (utilityIntersectionGroupRef.current) {
-      if (layers.utilityIntersections) map.addLayer(utilityIntersectionGroupRef.current);
-      else map.removeLayer(utilityIntersectionGroupRef.current);
-    }
+    if (layers.routes && routeGroupRef.current) map.addLayer(routeGroupRef.current);
+    else if (routeGroupRef.current) map.removeLayer(routeGroupRef.current);
+
+    if (layers.forests && forestGroupRef.current) map.addLayer(forestGroupRef.current);
+    else if (forestGroupRef.current) map.removeLayer(forestGroupRef.current);
+
+    if (layers.protectedAreas && protectedGroupRef.current) map.addLayer(protectedGroupRef.current);
+    else if (protectedGroupRef.current) map.removeLayer(protectedGroupRef.current);
+
+    if (layers.rivers && riverGroupRef.current) map.addLayer(riverGroupRef.current);
+    else if (riverGroupRef.current) map.removeLayer(riverGroupRef.current);
+
+    if (layers.riverCrossings && crossingGroupRef.current) map.addLayer(crossingGroupRef.current);
+    else if (crossingGroupRef.current) map.removeLayer(crossingGroupRef.current);
+
+    if (layers.pipelines && pipelineGroupRef.current) map.addLayer(pipelineGroupRef.current);
+    else if (pipelineGroupRef.current) map.removeLayer(pipelineGroupRef.current);
+
+    if (layers.undergroundCables && cableGroupRef.current) map.addLayer(cableGroupRef.current);
+    else if (cableGroupRef.current) map.removeLayer(cableGroupRef.current);
+
+    if (layers.utilityIntersections && utilityIntersectionGroupRef.current) map.addLayer(utilityIntersectionGroupRef.current);
+    else if (utilityIntersectionGroupRef.current) map.removeLayer(utilityIntersectionGroupRef.current);
   }, [layers]);
 
-  // Render geometries, routes, markers
+  // Render Routes and Markers
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
+    if (!mapRef.current) return;
+    const map = mapRef.current;
 
     routeGroupRef.current?.clearLayers();
     forestGroupRef.current?.clearLayers();
     protectedGroupRef.current?.clearLayers();
     riverGroupRef.current?.clearLayers();
+    crossingGroupRef.current?.clearLayers();
     pipelineGroupRef.current?.clearLayers();
     cableGroupRef.current?.clearLayers();
-    crossingGroupRef.current?.clearLayers();
     utilityIntersectionGroupRef.current?.clearLayers();
-    markerGroupRef.current?.clearLayers();
 
-    // Source pin
-    const srcIcon = L.divIcon({
+    const bounds = L.latLngBounds([]);
+
+    // Source Marker
+    const sourceIcon = L.divIcon({
       className: '',
       html: `<div style="
-        width:28px;height:28px;border-radius:50%;
-        background:#14b8a6;border:2px solid #070a12;
+        width:32px;height:32px;border-radius:50%;
+        background:#0d9488;border:3px solid #ffffff;
+        box-shadow:0 0 16px rgba(13,148,136,0.8);
         display:flex;align-items:center;justify-content:center;
-        font-size:11px;font-weight:800;color:#fff;
-        box-shadow:0 0 14px rgba(20,184,166,0.6);
+        color:white;font-weight:800;font-size:12px;font-family:Inter,sans-serif;
       ">S</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     });
+    L.marker(sourceCoords, { icon: sourceIcon })
+      .bindPopup(`<b>Origin:</b> ${sourceName}`)
+      .addTo(routeGroupRef.current!);
+    bounds.extend(sourceCoords);
 
-    // Destination pin
-    const dstIcon = L.divIcon({
+    // Dest Marker
+    const destIcon = L.divIcon({
       className: '',
       html: `<div style="
-        width:28px;height:28px;border-radius:50%;
-        background:#f59e0b;border:2px solid #070a12;
+        width:32px;height:32px;border-radius:50%;
+        background:#d97706;border:3px solid #ffffff;
+        box-shadow:0 0 16px rgba(217,119,6,0.8);
         display:flex;align-items:center;justify-content:center;
-        font-size:11px;font-weight:800;color:#fff;
-        box-shadow:0 0 14px rgba(245,158,11,0.6);
+        color:white;font-weight:800;font-size:12px;font-family:Inter,sans-serif;
       ">D</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     });
+    L.marker(destCoords, { icon: destIcon })
+      .bindPopup(`<b>Destination:</b> ${destName}`)
+      .addTo(routeGroupRef.current!);
+    bounds.extend(destCoords);
 
-    const sMarker = L.marker(sourceCoords, { icon: srcIcon }).bindPopup(
-      `<div style="font-family:Inter,sans-serif;padding:6px">
-        <div style="font-size:10px;color:#14b8a6;font-weight:700;margin-bottom:2px;text-transform:uppercase">Origin</div>
-        <div style="font-size:12px;font-weight:600;color:#f1f5f9">${sourceName.split('(')[0].trim()}</div>
-      </div>`
-    );
-    const dMarker = L.marker(destCoords, { icon: dstIcon }).bindPopup(
-      `<div style="font-family:Inter,sans-serif;padding:6px">
-        <div style="font-size:10px;color:#f59e0b;font-weight:700;margin-bottom:2px;text-transform:uppercase">Destination</div>
-        <div style="font-size:12px;font-weight:600;color:#f1f5f9">${destName.split('(')[0].trim()}</div>
-      </div>`
-    );
-
-    markerGroupRef.current?.addLayer(sMarker);
-    markerGroupRef.current?.addLayer(dMarker);
-
-    const bounds = L.latLngBounds([sourceCoords, destCoords]);
-
-    // Render Routes & GIS Geometries
     routes.forEach((rt) => {
       const isSelected = rt.id === selectedRouteId;
+      const waypoints = rt.waypoints || [];
 
-      // Draw route polyline
-      const polyline = L.polyline(rt.waypoints, {
-        color: rt.color,
-        weight: isSelected ? 5 : 3,
-        opacity: isSelected ? 0.95 : 0.4,
-        dashArray: isSelected ? undefined : '8, 6',
-        lineCap: 'round',
-        lineJoin: 'round',
-      });
+      if (waypoints.length > 0) {
+        const polyline = L.polyline(waypoints, {
+          color: rt.color,
+          weight: isSelected ? 6 : 3.5,
+          opacity: isSelected ? 0.95 : 0.5,
+          dashArray: isSelected ? undefined : '6,8',
+        });
 
-      polyline.on('click', () => onSelectRoute(rt.id));
-      polyline.bindTooltip(
-        `<div style="font-family:Inter,sans-serif">
-          <strong style="color:${rt.color}">${rt.name}</strong><br/>
-          ${rt.distanceKm.toFixed(0)} km · ${Math.floor(rt.durationMinutes / 60)}h ${rt.durationMinutes % 60}m
-        </div>`
-      );
+        polyline.on('click', () => onSelectRoute(rt.id));
+        polyline.bindTooltip(
+          `<b>${rt.name}</b><br/>${rt.distanceKm} km · ${Math.floor(rt.durationMinutes / 60)}h ${rt.durationMinutes % 60}m`,
+          { sticky: true }
+        );
 
-      routeGroupRef.current?.addLayer(polyline);
-      rt.waypoints.forEach((pt) => bounds.extend(pt));
+        routeGroupRef.current?.addLayer(polyline);
+        waypoints.forEach((pt) => bounds.extend(pt));
+      }
 
       // Draw Forest Polygons
       rt.forestGeometries?.forEach((fg) => {
@@ -254,27 +220,27 @@ export const GISMap: React.FC<GISMapProps> = ({
           const poly = L.polygon(fg.coordinates, {
             color: '#059669',
             fillColor: '#10b981',
-            fillOpacity: 0.22,
+            fillOpacity: 0.25,
             weight: 1.5,
-          }).bindTooltip(`<b>Forest Area</b><br/>${fg.name}`);
+          }).bindTooltip(`<b>Forest Zone</b><br/>${fg.name}`);
           forestGroupRef.current?.addLayer(poly);
         }
       });
 
-      // Draw Protected Area Polygons
+      // Draw Protected Areas
       rt.protectedGeometries?.forEach((pg) => {
         if (pg.coordinates && pg.coordinates.length >= 3) {
           const poly = L.polygon(pg.coordinates, {
             color: '#d97706',
             fillColor: '#f59e0b',
-            fillOpacity: 0.22,
+            fillOpacity: 0.25,
             weight: 1.5,
           }).bindTooltip(`<b>Protected Sanctuary</b><br/>${pg.name}`);
           protectedGroupRef.current?.addLayer(poly);
         }
       });
 
-      // Draw River Lines
+      // Draw Rivers
       rt.riverGeometries?.forEach((rg) => {
         if (rg.coordinates && rg.coordinates.length >= 2) {
           const line = L.polyline(rg.coordinates, {
@@ -409,153 +375,215 @@ export const GISMap: React.FC<GISMapProps> = ({
     <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl">
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
-      {/* Layer Control Panel */}
-      {/* Unified GIS Control & Legend Panel */}
-      <div className="absolute top-4 left-4 z-20 glass rounded-2xl p-3.5 text-xs space-y-3.5 max-w-[240px] max-h-[calc(100%-2rem)] overflow-y-auto border border-white/[0.1] shadow-2xl">
-        {/* GIS Layers Section */}
-        <div>
-          <div className="flex items-center gap-1.5 text-slate-200 font-bold border-b border-white/[0.08] pb-1.5 mb-2">
+      {/* Unified Responsive GIS Sidebar Overlay */}
+      <div className="absolute top-4 left-4 z-20 glass rounded-2xl p-3.5 text-xs max-w-[240px] max-h-[calc(100%-2rem)] overflow-y-auto border border-white/[0.1] shadow-2xl transition-all duration-300">
+        
+        {/* Panel Header & View Tabs */}
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-2.5">
+          <div className="flex items-center gap-1.5 text-slate-200 font-bold">
             <Layers className="w-3.5 h-3.5 text-teal-400" />
-            <span>GIS LAYERS</span>
+            <span>GIS PANELS</span>
           </div>
 
-          <div className="space-y-1 text-[11px]">
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Routes</div>
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.routes}
-                onChange={() => toggleLayer('routes')}
-                className="rounded border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Candidate Routes</span>
-            </label>
-
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
-              Environmental
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.forests}
-                onChange={() => toggleLayer('forests')}
-                className="rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Forests</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.protectedAreas}
-                onChange={() => toggleLayer('protectedAreas')}
-                className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Protected Areas</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.rivers}
-                onChange={() => toggleLayer('rivers')}
-                className="rounded border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Rivers</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.riverCrossings}
-                onChange={() => toggleLayer('riverCrossings')}
-                className="rounded border-slate-700 text-cyan-500 focus:ring-0 cursor-pointer"
-              />
-              <span>River Crossings (🌊)</span>
-            </label>
-
-            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
-              Existing Infrastructure
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.pipelines}
-                onChange={() => toggleLayer('pipelines')}
-                className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Pipelines</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.undergroundCables}
-                onChange={() => toggleLayer('undergroundCables')}
-                className="rounded border-slate-700 text-purple-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Underground Power Cables</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-              <input
-                type="checkbox"
-                checked={layers.utilityIntersections}
-                onChange={() => toggleLayer('utilityIntersections')}
-                className="rounded border-slate-700 text-sky-400 focus:ring-0 cursor-pointer"
-              />
-              <span>Utility Intersections (◆)</span>
-            </label>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPanelCollapsed(!panelCollapsed)}
+              className="p-1 rounded glass-light text-slate-400 hover:text-white transition-all cursor-pointer"
+              title={panelCollapsed ? "Expand Panel" : "Minimize Panel"}
+            >
+              {panelCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
 
-        {/* Map Legend Section */}
-        <div className="pt-2 border-t border-white/[0.08] space-y-1 text-slate-300">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-            MAP LEGEND
+        {/* Tab Switcher Pills */}
+        {!panelCollapsed && (
+          <div className="grid grid-cols-3 gap-1 bg-black/30 p-1 rounded-lg border border-white/[0.05] mb-3">
+            <button
+              onClick={() => setPanelTab('layers')}
+              className={`py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                panelTab === 'layers'
+                  ? 'bg-teal-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Layers
+            </button>
+            <button
+              onClick={() => setPanelTab('legend')}
+              className={`py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                panelTab === 'legend'
+                  ? 'bg-teal-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Legend
+            </button>
+            <button
+              onClick={() => setPanelTab('both')}
+              className={`py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                panelTab === 'both'
+                  ? 'bg-teal-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Both
+            </button>
           </div>
-          <div className="text-[9px] font-bold text-slate-500 uppercase">ROUTES</div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-teal-400 shrink-0" />
-            <span>Route A</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-            <span>Route B</span>
-          </div>
+        )}
 
-          <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">ENVIRONMENT</div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-emerald-500/40 border border-emerald-500 shrink-0" />
-            <span>Forest</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-amber-500/40 border border-amber-500 shrink-0" />
-            <span>Protected Area</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3.5 h-0.5 bg-sky-400 shrink-0" />
-            <span>River</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs">🌊</span>
-            <span>River crossing</span>
-          </div>
+        {/* Main Content Body */}
+        {!panelCollapsed && (
+          <div className="space-y-3.5">
+            {/* GIS Layers Section */}
+            {(panelTab === 'layers' || panelTab === 'both') && (
+              <div>
+                <div className="text-[10px] font-bold text-teal-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>LAYER CONTROLS</span>
+                </div>
 
-          <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">INFRASTRUCTURE</div>
-          <div className="flex items-center gap-2">
-            <div className="w-3.5 h-0.5 bg-amber-500 border-b border-dashed border-amber-400 shrink-0" />
-            <span>Pipeline</span>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Routes</div>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.routes}
+                      onChange={() => toggleLayer('routes')}
+                      className="rounded border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Candidate Routes</span>
+                  </label>
+
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+                    Environmental
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.forests}
+                      onChange={() => toggleLayer('forests')}
+                      className="rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Forests</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.protectedAreas}
+                      onChange={() => toggleLayer('protectedAreas')}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Protected Areas</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.rivers}
+                      onChange={() => toggleLayer('rivers')}
+                      className="rounded border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Rivers</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.riverCrossings}
+                      onChange={() => toggleLayer('riverCrossings')}
+                      className="rounded border-slate-700 text-cyan-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>River Crossings (🌊)</span>
+                  </label>
+
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+                    Existing Infrastructure
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.pipelines}
+                      onChange={() => toggleLayer('pipelines')}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Pipelines</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.undergroundCables}
+                      onChange={() => toggleLayer('undergroundCables')}
+                      className="rounded border-slate-700 text-purple-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Underground Power Cables</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={layers.utilityIntersections}
+                      onChange={() => toggleLayer('utilityIntersections')}
+                      className="rounded border-slate-700 text-sky-400 focus:ring-0 cursor-pointer"
+                    />
+                    <span>Utility Intersections (◆)</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Map Legend Section */}
+            {(panelTab === 'legend' || panelTab === 'both') && (
+              <div className={`${panelTab === 'both' ? 'pt-2.5 border-t border-white/[0.08]' : ''} space-y-1.5 text-slate-300`}>
+                <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">
+                  MAP LEGEND
+                </div>
+                <div className="text-[9px] font-bold text-slate-500 uppercase">ROUTES</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-teal-400 shrink-0" />
+                  <span>Route A</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>Route B</span>
+                </div>
+
+                <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">ENVIRONMENT</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-emerald-500/40 border border-emerald-500 shrink-0" />
+                  <span>Forest</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-amber-500/40 border border-amber-500 shrink-0" />
+                  <span>Protected Area</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3.5 h-0.5 bg-sky-400 shrink-0" />
+                  <span>River</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs">🌊</span>
+                  <span>River crossing</span>
+                </div>
+
+                <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">INFRASTRUCTURE</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3.5 h-0.5 bg-amber-500 border-b border-dashed border-amber-400 shrink-0" />
+                  <span>Pipeline</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3.5 h-0.5 bg-purple-400 border-b border-dashed border-purple-300 shrink-0" />
+                  <span>Underground power cable</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sky-400 text-xs font-black">◆</span>
+                  <span>Utility intersection</span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3.5 h-0.5 bg-purple-400 border-b border-dashed border-purple-300 shrink-0" />
-            <span>Underground power cable</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sky-400 text-xs font-black">◆</span>
-            <span>Utility intersection</span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
