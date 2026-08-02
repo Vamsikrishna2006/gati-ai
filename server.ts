@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -138,7 +139,7 @@ function generateFallbackRoutes(
     {
       id: 'rt-1',
       name: 'Route A',
-      color: '#14b8a6', // teal
+      color: '#14b8a6',
       distanceKm: parseFloat((directDist * 1.12).toFixed(1)),
       durationMinutes: Math.round((directDist * 1.12) / 1.1),
       forestFeatureCount: 0,
@@ -156,7 +157,7 @@ function generateFallbackRoutes(
     {
       id: 'rt-2',
       name: 'Route B',
-      color: '#f59e0b', // amber
+      color: '#f59e0b',
       distanceKm: parseFloat((directDist * 1.24).toFixed(1)),
       durationMinutes: Math.round((directDist * 1.24) / 1.1),
       forestFeatureCount: 0,
@@ -380,7 +381,7 @@ app.post('/api/routes/ors', async (req, res) => {
 });
 
 // ------------------------------------
-// ENV & UTILITY INFRASTRUCTURE CHECK: Overpass forest/protected/river + Pipelines & Underground Power Cables
+// ENV & UTILITY INFRASTRUCTURE CHECK
 // ------------------------------------
 app.post('/api/routes/env-check', async (req, res) => {
   const { routes } = req.body;
@@ -438,7 +439,6 @@ app.post('/api/routes/env-check', async (req, res) => {
         const pipelineGeometries: any[] = [];
         const undergroundCableGeometries: any[] = [];
 
-        // Deduplication set by OSM Element ID
         const intersectPipelineOsmIds = new Set<string>();
         const intersectCableOsmIds = new Set<string>();
         const utilityIntersections: any[] = [];
@@ -497,7 +497,6 @@ app.post('/api/routes/env-check', async (req, res) => {
                   coordinates: geomNodes,
                 });
 
-                // Line intersection check with river nodes
                 for (let i = 0; i < waypoints.length - 1; i++) {
                   const p1 = waypoints[i];
                   const p2 = waypoints[i + 1];
@@ -524,7 +523,6 @@ app.post('/api/routes/env-check', async (req, res) => {
                   }
                 }
               } else if (isPipeline) {
-                // Read pipeline metadata WITHOUT inferring substance from name or location
                 const substanceTag = tags.substance || tags.pipeline;
                 const rawSubstance = substanceTag ? String(substanceTag).trim() : 'Pipeline type unavailable';
                 const substanceDisplay = rawSubstance.charAt(0).toUpperCase() + rawSubstance.slice(1);
@@ -539,7 +537,6 @@ app.post('/api/routes/env-check', async (req, res) => {
                   coordinates: geomNodes,
                 });
 
-                // Line intersection with candidate route waypoints
                 for (let i = 0; i < waypoints.length - 1; i++) {
                   const p1 = waypoints[i];
                   const p2 = waypoints[i + 1];
@@ -571,7 +568,6 @@ app.post('/api/routes/env-check', async (req, res) => {
                   }
                 }
               } else if (isCable) {
-                // Distinguish underground power cable based strictly on source tags (e.g. location=underground)
                 const isUnderground = tags.location === 'underground' || tags.cable === 'underground' || tags.underground === 'yes';
                 const cableLocationDisplay = isUnderground
                   ? 'Mapped underground power cable'
@@ -586,7 +582,6 @@ app.post('/api/routes/env-check', async (req, res) => {
                   coordinates: geomNodes,
                 });
 
-                // Line intersection with candidate route waypoints
                 for (let i = 0; i < waypoints.length - 1; i++) {
                   const p1 = waypoints[i];
                   const p2 = waypoints[i + 1];
@@ -778,10 +773,17 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    let distPath = path.join(process.cwd(), 'dist');
+    if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+      distPath = path.resolve(__dirname, '..', 'dist');
+    }
+    if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+      distPath = path.resolve(__dirname);
+    }
+    console.log(`Serving production static assets from: ${distPath}`);
     app.use(express.static(distPath));
-    app.get('*', (_req, reply) => {
-      reply.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
