@@ -10,7 +10,8 @@ import { DPRReportModal } from './components/DPRReportModal';
 import { RouteOption } from './types';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<ActivePage | 'landing'>('landing');
+  // Default directly to 'map' so users immediately see the GIS Map, Satellite Switcher, and Live Routes
+  const [currentPage, setCurrentPage] = useState<ActivePage | 'landing'>('map');
 
   // Shared live route state lifted from MapPlannerPage so analysis + AI pages can consume it
   const [liveRoutes, setLiveRoutes] = useState<RouteOption[]>([]);
