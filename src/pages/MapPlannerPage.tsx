@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RouteOption } from '../types';
 import { GISMap } from '../components/GISMap';
 import { RouteCard } from '../components/RouteCard';
@@ -35,7 +35,6 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
     const found = MAJOR_INDIAN_NODES.find((n) => n.name === selectedName);
     if (found) {
       setSourceNode(found);
-      // If same as destination, switch destination automatically
       if (found.name === destNode.name) {
         const alt = MAJOR_INDIAN_NODES.find((n) => n.name !== found.name);
         if (alt) setDestNode(alt);
@@ -47,7 +46,6 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
     const found = MAJOR_INDIAN_NODES.find((n) => n.name === selectedName);
     if (found) {
       setDestNode(found);
-      // If same as source, switch source automatically
       if (found.name === sourceNode.name) {
         const alt = MAJOR_INDIAN_NODES.find((n) => n.name !== found.name);
         if (alt) setSourceNode(alt);
@@ -109,6 +107,11 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
     }
   };
 
+  // Auto-trigger search on initial mount
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden bg-[#070a12] relative z-10">
 
@@ -119,7 +122,7 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
           <span>Plan Corridor</span>
         </div>
 
-        {/* Source Dropdown (Filters out selected destination) */}
+        {/* Source Dropdown */}
         <div className="relative">
           <select
             value={sourceNode.name}
@@ -137,7 +140,7 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
 
         <ArrowRight className="w-4 h-4 text-slate-500 shrink-0" />
 
-        {/* Destination Dropdown (Filters out selected origin) */}
+        {/* Destination Dropdown */}
         <div className="relative">
           <select
             value={destNode.name}
@@ -156,118 +159,107 @@ export const MapPlannerPage: React.FC<MapPlannerPageProps> = ({
         <button
           onClick={handleSearch}
           disabled={loading || sourceNode.name === destNode.name}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-lg transition-all cursor-pointer shadow-md shadow-teal-950/40"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-teal-950/40 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Analyzing GIS...</span>
+            </>
           ) : (
-            <RefreshCw className="w-3.5 h-3.5" />
+            <>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Find Routes</span>
+            </>
           )}
-          {loading ? 'Analyzing...' : 'Find Routes'}
         </button>
 
-        {routes.length > 0 && !loading && (
+        {routes.length > 0 && (
           <button
             onClick={onOpenAnalysis}
-            className="ml-auto flex items-center gap-1.5 px-3 py-2 glass-light border border-teal-500/30 text-teal-400 hover:text-teal-300 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+            className="ml-auto flex items-center gap-2 px-4 py-2 glass-light border border-teal-500/30 text-teal-300 hover:text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md"
           >
-            Compare in Detail <ArrowRight className="w-3.5 h-3.5" />
+            <span>Compare in Detail</span>
+            <ArrowRight className="w-3.5 h-3.5 text-teal-400" />
           </button>
         )}
       </div>
 
-      {/* Main Workspace Split */}
-      <div className="flex-1 flex overflow-hidden">
-
-        {/* Map Viewport */}
-        <div className="flex-1 relative p-3">
+      {/* Main Grid View */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden relative">
+        {/* Left/Center: GIS Map */}
+        <div className="lg:col-span-8 xl:col-span-9 h-full p-3 relative">
           <GISMap
-            sourceCoords={sourceNode.coords}
-            sourceName={sourceNode.name}
-            destCoords={destNode.coords}
-            destName={destNode.name}
             routes={routes}
             selectedRouteId={selectedRouteId}
-            onSelectRoute={setSelectedRouteId}
+            onSelectRoute={(id) => setSelectedRouteId(id)}
+            sourceCoords={sourceNode.coords}
+            destCoords={destNode.coords}
+            sourceName={sourceNode.name.split('(')[0].trim()}
+            destName={destNode.name.split('(')[0].trim()}
           />
+        </div>
 
-          {/* Loading Overlay */}
+        {/* Right Sidebar: Route Option Cards */}
+        <div className="lg:col-span-4 xl:col-span-3 h-full overflow-y-auto p-4 border-l border-white/[0.08] glass-light space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+              ROUTE OPTIONS
+            </h2>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {routes.length} candidate alignments calculated
+            </span>
+          </div>
+
+          {/* Loading status alert */}
           {loading && (
-            <div className="absolute inset-3 rounded-2xl glass flex flex-col items-center justify-center gap-3 z-30">
-              <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
-              <p className="text-sm text-slate-200 font-medium max-w-sm text-center">{loadingStatus}</p>
+            <div className="p-3 rounded-xl glass-light border border-teal-500/30 text-teal-300 text-xs flex items-center gap-2.5 animate-pulse">
+              <Loader2 className="w-4 h-4 animate-spin text-teal-400 shrink-0" />
+              <span>{loadingStatus || 'Processing GIS layers...'}</span>
             </div>
           )}
 
-          {/* Error Notice */}
+          {/* Error Banner */}
           {errorMsg && (
-            <div className="absolute top-6 left-6 right-6 z-30 glass-card border border-rose-500/30 p-3.5 rounded-xl flex items-center gap-3 text-rose-300 text-xs shadow-xl">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span className="flex-1">{errorMsg}</span>
-              <button onClick={() => setErrorMsg(null)} className="text-slate-400 hover:text-white">×</button>
-            </div>
-          )}
-
-          {/* Initial Prompt Banner */}
-          {!loading && !hasSearched && (
-            <div className="absolute inset-3 rounded-2xl flex flex-col items-center justify-center gap-3 pointer-events-none">
-              <div className="glass-card px-6 py-5 rounded-2xl text-center max-w-sm border border-white/[0.09] shadow-2xl">
-                <MapPin className="w-8 h-8 text-teal-400 mx-auto mb-2" />
-                <p className="text-sm text-white font-semibold mb-1">Select Origin & Destination Above</p>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  We'll draw candidate driving routes from OpenRouteService and calculate real river line crossings and forest/protected-area overlaps from OpenStreetMap.
-                </p>
+            <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold block">Routing Notice</strong>
+                {errorMsg}
               </div>
             </div>
           )}
-        </div>
 
-        {/* Right Side Panel: Candidate Alignments */}
-        <div className="w-80 glass border-l border-white/[0.08] flex flex-col p-4 gap-3 overflow-y-auto shrink-0">
-          <div>
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-0.5">Route Options</h3>
-            <p className="text-xs text-slate-400">
-              {routes.length > 0
-                ? `${routes.length} candidate alignments calculated`
-                : 'Select nodes above to compute routes'}
-            </p>
-          </div>
-
+          {/* Render Route Cards */}
           {routes.length > 0 ? (
             <div className="space-y-3">
-              {routes.map((rt) => (
+              {routes.map((r, idx) => (
                 <RouteCard
-                  key={rt.id}
-                  route={rt}
-                  isSelected={rt.id === selectedRouteId}
-                  onSelect={() => setSelectedRouteId(rt.id)}
+                  key={r.id}
+                  route={r}
+                  label={idx === 0 ? 'Route A (Primary Corridor)' : 'Route B (Alternative Corridor)'}
+                  isSelected={r.id === selectedRouteId}
+                  onSelect={() => setSelectedRouteId(r.id)}
                 />
               ))}
 
               <button
                 onClick={onOpenAnalysis}
-                className="w-full py-2.5 glass-card border border-teal-500/30 text-teal-400 hover:text-teal-300 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                className="w-full py-3 mt-2 bg-gradient-to-r from-teal-600/30 to-emerald-600/30 hover:from-teal-600/50 hover:to-emerald-600/50 border border-teal-500/40 rounded-xl text-teal-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                Full Comparison & Tradeoff <ArrowRight className="w-3.5 h-3.5" />
+                <span>Full Comparison & Tradeoff</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          ) : loading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
-                  <div className="h-3 bg-white/[0.08] rounded mb-3 w-3/4" />
-                  <div className="h-2 bg-white/[0.05] rounded mb-2" />
-                  <div className="h-2 bg-white/[0.05] rounded w-2/3" />
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {/* Footer Data Provenance Badge */}
-          <div className="mt-auto pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 flex items-center gap-1.5 justify-center">
-            <Database className="w-3 h-3 text-teal-400" />
-            <span>OpenRouteService · Overpass · Gemini</span>
-          </div>
+          ) : (
+            !loading && (
+              <div className="text-center py-10 px-4 space-y-2 text-slate-500">
+                <Database className="w-8 h-8 mx-auto text-slate-600" />
+                <p className="text-xs">No routes calculated yet.</p>
+                <p className="text-[11px] text-slate-600">Select Origin and Destination above and click "Find Routes".</p>
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>
