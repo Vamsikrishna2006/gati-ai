@@ -1,7 +1,7 @@
 import React from 'react';
 import { RouteOption } from '../types';
 import { jsPDF } from 'jspdf';
-import { FileText, Download, X, CheckCircle2 } from 'lucide-react';
+import { FileText, Download, X, CheckCircle2, Users, Building2 } from 'lucide-react';
 
 interface DPRReportModalProps {
   isOpen: boolean;
@@ -44,7 +44,7 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
     doc.setTextColor(241, 245, 249);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('DETAILED PROJECT SCREENING REPORT (DPR)', 14, 22);
+    doc.text('DETAILED PROJECT REPORT & INTER-DEPARTMENTAL COORDINATION NOTICE', 14, 22);
 
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
@@ -66,7 +66,7 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
     y += 5;
     doc.text(`Destination Node: ${destLabel || 'Selected Destination'}`, 14, y);
     y += 5;
-    doc.text('Assessment Type: Early-Stage GIS Corridor Pre-Feasibility Screening', 14, y);
+    doc.text('Assessment Type: Inter-Departmental Corridor Pre-Feasibility & Joint Trenching Clearance', 14, y);
     y += 10;
 
     // Section 2: Candidate Alignment Comparison Matrix
@@ -110,32 +110,30 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
 
     y += 6;
 
-    // Section 3: Utility & River Intersections Inventory
+    // Section 3: Inter-Departmental Coordination Protocol (PM Gati Shakti Protocol)
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('3. MAPPED UTILITY INFRASTRUCTURE INTERSECTIONS', 14, y);
+    doc.text('3. INTER-DEPARTMENTAL PRE-PAVING COORDINATION PROTOCOL', 14, y);
     y += 7;
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
+    doc.text('To prevent post-construction road diggings, the following departmental clearances are issued:', 14, y);
+    y += 6;
 
-    if (routeA?.utilityIntersections && routeA.utilityIntersections.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Route A Mapped Utility Intersections:', 14, y);
+    const deptNotices = [
+      '• Electricity / Power Board (DISCOM): Co-lay underground power cables in roadside utility ducts BEFORE asphalt paving.',
+      '• Water Resources (Jal Shakti): Align water supply pipelines under service roads and river bridge pier conduits.',
+      '• Forest & Environment (MoEFCC): Apply for Stage-I Forest Conservation Act (FCA) diversion clearance.',
+      '• Telecom Authority (DoT/BBNL): Reserve common optical fiber cable (OFC) conduits in Right-of-Way (RoW).',
+    ];
+
+    deptNotices.forEach((notice) => {
+      doc.text(notice, 16, y);
       y += 5;
-      doc.setFont('helvetica', 'normal');
+    });
 
-      routeA.utilityIntersections.slice(0, 4).forEach((ui) => {
-        const typeLabel = ui.type === 'pipeline' ? `Pipeline (${ui.substance || 'Pipeline type unavailable'})` : 'Underground power cable';
-        doc.text(`• ${typeLabel} - ${ui.name || 'Mapped Infrastructure'} at [${ui.coordinates[0].toFixed(4)}, ${ui.coordinates[1].toFixed(4)}]`, 18, y);
-        y += 5;
-      });
-    } else {
-      doc.text('• No mapped utility infrastructure detected in available public OpenStreetMap data.', 18, y);
-      y += 5;
-    }
-
-    y += 8;
+    y += 6;
 
     // Footer Disclaimer & Signoff
     doc.setDrawColor(203, 213, 225);
@@ -146,10 +144,10 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
     doc.setTextColor(100, 116, 139);
     doc.text('PUBLIC GIS COVERAGE: Utility data reflects publicly mapped OpenStreetMap features and may be incomplete.', 14, y);
     y += 4;
-    doc.text('FIELD VERIFICATION WARNING: Mapped utility intersections should be verified through authoritative utility records.', 14, y);
+    doc.text('FIELD VERIFICATION WARNING: Inter-departmental coordination meetings & field surveys required prior to ground-breaking.', 14, y);
 
     // Save File
-    doc.save(`${dprNumber}_GatiAI_Detailed_Project_Report.pdf`);
+    doc.save(`${dprNumber}_GatiAI_InterDepartment_Detailed_Report.pdf`);
   };
 
   return (
@@ -159,10 +157,10 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
         <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between glass-light">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400">
-              <FileText className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Detailed Project Report (DPR) Preview</h2>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Inter-Departmental DPR & Clearance Notice</h2>
               <p className="text-[10px] text-slate-400">Ref: {dprNumber} · Date: {dateStr}</p>
             </div>
           </div>
@@ -179,12 +177,12 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
           {/* Executive Overview Banner */}
           <div className="glass-light p-4 rounded-xl border border-white/[0.06] space-y-1">
             <div className="flex justify-between items-center text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-              <span>Project Screening Brief</span>
+              <span>Joint Department Screening Brief</span>
               <span className="text-teal-400 font-extrabold">{dprNumber}</span>
             </div>
             <div className="text-sm font-bold text-white">{sourceLabel.split('(')[0]} → {destLabel.split('(')[0]}</div>
             <p className="text-[11px] text-slate-300">
-              Pre-feasibility GIS screening report evaluating candidate infrastructure corridors against mapped forest reserves, protected sanctuaries, river crossings, mapped pipelines, and underground power cables.
+              Pre-construction screening report coordinating Highways, Power DISCOM, Jal Shakti, and Forest Authorities to co-lay underground utilities in designated right-of-way (RoW) conduits BEFORE asphalt paving.
             </p>
           </div>
 
@@ -223,18 +221,16 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
             </div>
           )}
 
-          {/* PDF Report Structure Note */}
+          {/* Inter-Departmental Coordination Protocol Box */}
           <div className="glass-light p-4 rounded-xl border border-teal-500/20 space-y-2">
             <div className="text-xs font-bold text-teal-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-teal-400" /> DPR PDF Export Contents
+              <Users className="w-4 h-4 text-teal-400" /> Joint Inter-Department Action Protocol
             </div>
-            <ul className="grid md:grid-cols-2 gap-1.5 text-[11px] text-slate-300 list-disc list-inside">
-              <li>Formal Ref ID & Timestamp</li>
-              <li>Side-by-side alignment comparison matrix</li>
-              <li>River bridge crossing coordinates & OSM names</li>
-              <li>Mapped pipeline intersection inventory</li>
-              <li>Mapped underground power cable inventory</li>
-              <li>Public GIS coverage & field verification disclaimers</li>
+            <ul className="grid md:grid-cols-2 gap-2 text-[11px] text-slate-300 list-disc list-inside">
+              <li>⚡ <strong>Electricity DISCOM:</strong> Lay power cables in side utility ducts BEFORE asphalt paving.</li>
+              <li>💧 <strong>Water Jal Shakti:</strong> Co-locate trunk pipelines in roadside service corridors.</li>
+              <li>🌲 <strong>Forest MoEFCC:</strong> File Stage-I FCA clearance for mapped forest overlaps.</li>
+              <li>📡 <strong>Telecom DoT:</strong> Reserve optical fiber cable (OFC) conduits in Right-of-Way.</li>
             </ul>
           </div>
         </div>
@@ -252,7 +248,7 @@ export const DPRReportModal: React.FC<DPRReportModalProps> = ({
             onClick={generatePDF}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-teal-950/40 transition-all cursor-pointer"
           >
-            <Download className="w-4 h-4" /> Download Official DPR PDF
+            <Download className="w-4 h-4" /> Download Joint Clearance Report (PDF)
           </button>
         </div>
       </div>
