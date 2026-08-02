@@ -815,24 +815,28 @@ app.use('/api/*', (_req, res) => {
 // VITE / STATIC SERVING
 // ------------------------------------
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  const distPath = path.join(process.cwd(), 'dist');
+  const distHtmlExists = fs.existsSync(path.join(distPath, 'index.html')) || fs.existsSync(path.resolve(__dirname, 'index.html'));
+
+  if (!distHtmlExists && process.env.NODE_ENV === 'development') {
+    console.log('Starting Vite development middleware...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    let distPath = path.join(process.cwd(), 'dist');
-    if (!fs.existsSync(path.join(distPath, 'index.html'))) {
-      distPath = path.resolve(__dirname, '..', 'dist');
+    let staticPath = distPath;
+    if (!fs.existsSync(path.join(staticPath, 'index.html'))) {
+      staticPath = path.resolve(__dirname, '..', 'dist');
     }
-    if (!fs.existsSync(path.join(distPath, 'index.html'))) {
-      distPath = path.resolve(__dirname);
+    if (!fs.existsSync(path.join(staticPath, 'index.html'))) {
+      staticPath = path.resolve(__dirname);
     }
-    console.log(`Serving production static assets from: ${distPath}`);
-    app.use(express.static(distPath));
+    console.log(`Serving compiled production static assets from: ${staticPath}`);
+    app.use(express.static(staticPath));
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      res.sendFile(path.join(staticPath, 'index.html'));
     });
   }
 
