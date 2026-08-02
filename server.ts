@@ -778,7 +778,7 @@ These findings indicate different planning considerations, but they do not estab
 
   try {
     let explanation = '';
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
