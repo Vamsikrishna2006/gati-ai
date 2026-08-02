@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RouteOption, GISLayerState } from '../types';
-import { Layers, MapPin, ChevronDown, ChevronUp, X, Globe, Sun, Image } from 'lucide-react';
+import { Layers, MapPin, ChevronDown, ChevronUp, X, Globe } from 'lucide-react';
 
 interface GISMapProps {
   routes: RouteOption[];
@@ -421,6 +421,58 @@ export const GISMap: React.FC<GISMapProps> = ({
     <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl">
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
+      {/* Prominent Top-Right Map View Switcher Bar (Dark | Satellite | Hybrid | Terrain) */}
+      <div className="absolute top-3 right-3 z-30 glass rounded-xl p-1.5 border border-white/[0.12] shadow-2xl backdrop-blur-md flex items-center gap-1">
+        <div className="text-[10px] font-bold text-slate-300 px-1.5 flex items-center gap-1">
+          <Globe className="w-3.5 h-3.5 text-teal-400" />
+          <span className="hidden sm:inline text-slate-300">View:</span>
+        </div>
+
+        <button
+          onClick={() => setMapStyle('dark')}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'dark'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:text-white glass-light'
+          }`}
+        >
+          Dark
+        </button>
+
+        <button
+          onClick={() => setMapStyle('satellite')}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'satellite'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:text-white glass-light'
+          }`}
+        >
+          Satellite
+        </button>
+
+        <button
+          onClick={() => setMapStyle('hybrid')}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'hybrid'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:text-white glass-light'
+          }`}
+        >
+          Hybrid
+        </button>
+
+        <button
+          onClick={() => setMapStyle('terrain')}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+            mapStyle === 'terrain'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'text-slate-300 hover:text-white glass-light'
+          }`}
+        >
+          Terrain
+        </button>
+      </div>
+
       {/* Floating Collapsed Pill Trigger (for Mobile/Small screens) */}
       {panelCollapsed ? (
         <button
@@ -428,7 +480,7 @@ export const GISMap: React.FC<GISMapProps> = ({
           className="absolute top-3 left-3 z-30 glass rounded-xl px-3 py-2 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-2 border border-white/[0.12] shadow-xl backdrop-blur-md cursor-pointer transition-all active:scale-95"
         >
           <Layers className="w-4 h-4 text-teal-400" />
-          <span>GIS Layers & Map Style</span>
+          <span>GIS Layers</span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
       ) : (
@@ -438,8 +490,8 @@ export const GISMap: React.FC<GISMapProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-1.5 mb-2">
             <div className="flex items-center gap-1.5 text-slate-200 font-bold text-xs">
-              <Globe className="w-3.5 h-3.5 text-teal-400" />
-              <span>GIS MAP CONTROLS</span>
+              <Layers className="w-3.5 h-3.5 text-teal-400" />
+              <span>GIS PANELS</span>
             </div>
 
             <button
@@ -449,58 +501,6 @@ export const GISMap: React.FC<GISMapProps> = ({
             >
               <X className="w-3.5 h-3.5" />
             </button>
-          </div>
-
-          {/* BASEMAP MAP VIEW SELECTOR (Hybrid / Satellite / Terrain Vector / Dark) */}
-          <div className="mb-3 space-y-1">
-            <div className="text-[9px] font-bold text-teal-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Globe className="w-3 h-3 text-teal-400" /> MAP VIEW STYLES
-            </div>
-            <div className="grid grid-cols-2 gap-1 bg-black/40 p-1.5 rounded-xl border border-white/[0.06]">
-              <button
-                onClick={() => setMapStyle('dark')}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  mapStyle === 'dark'
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Dark Vector</span>
-              </button>
-
-              <button
-                onClick={() => setMapStyle('satellite')}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  mapStyle === 'satellite'
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Satellite</span>
-              </button>
-
-              <button
-                onClick={() => setMapStyle('hybrid')}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  mapStyle === 'hybrid'
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Hybrid Map</span>
-              </button>
-
-              <button
-                onClick={() => setMapStyle('terrain')}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  mapStyle === 'terrain'
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>Terrain Vector</span>
-              </button>
-            </div>
           </div>
 
           {/* View Tabs */}
