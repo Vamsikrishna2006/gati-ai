@@ -410,147 +410,151 @@ export const GISMap: React.FC<GISMapProps> = ({
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
       {/* Layer Control Panel */}
-      <div className="absolute top-4 left-4 z-20 glass rounded-xl p-3 text-xs space-y-2 max-w-[230px] border border-white/[0.09] shadow-xl">
-        <div className="flex items-center gap-1.5 text-slate-300 font-bold border-b border-white/[0.08] pb-1.5">
-          <Layers className="w-3.5 h-3.5 text-teal-400" />
-          <span>GIS LAYERS</span>
-        </div>
-
-        <div className="space-y-1 text-[11px]">
-          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Routes</div>
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.routes}
-              onChange={() => toggleLayer('routes')}
-              className="rounded border-slate-700 text-teal-500 focus:ring-0"
-            />
-            <span>Candidate Routes</span>
-          </label>
-
-          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1 border-t border-white/[0.06]">
-            Environmental
+      {/* Unified GIS Control & Legend Panel */}
+      <div className="absolute top-4 left-4 z-20 glass rounded-2xl p-3.5 text-xs space-y-3.5 max-w-[240px] max-h-[calc(100%-2rem)] overflow-y-auto border border-white/[0.1] shadow-2xl">
+        {/* GIS Layers Section */}
+        <div>
+          <div className="flex items-center gap-1.5 text-slate-200 font-bold border-b border-white/[0.08] pb-1.5 mb-2">
+            <Layers className="w-3.5 h-3.5 text-teal-400" />
+            <span>GIS LAYERS</span>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.forests}
-              onChange={() => toggleLayer('forests')}
-              className="rounded border-slate-700 text-emerald-500 focus:ring-0"
-            />
-            <span>Forests</span>
-          </label>
 
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.protectedAreas}
-              onChange={() => toggleLayer('protectedAreas')}
-              className="rounded border-slate-700 text-amber-500 focus:ring-0"
-            />
-            <span>Protected Areas</span>
-          </label>
+          <div className="space-y-1 text-[11px]">
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Routes</div>
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.routes}
+                onChange={() => toggleLayer('routes')}
+                className="rounded border-slate-700 text-teal-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Candidate Routes</span>
+            </label>
 
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.rivers}
-              onChange={() => toggleLayer('rivers')}
-              className="rounded border-slate-700 text-sky-500 focus:ring-0"
-            />
-            <span>Rivers</span>
-          </label>
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+              Environmental
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.forests}
+                onChange={() => toggleLayer('forests')}
+                className="rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Forests</span>
+            </label>
 
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.riverCrossings}
-              onChange={() => toggleLayer('riverCrossings')}
-              className="rounded border-slate-700 text-cyan-500 focus:ring-0"
-            />
-            <span>River Crossings</span>
-          </label>
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.protectedAreas}
+                onChange={() => toggleLayer('protectedAreas')}
+                className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Protected Areas</span>
+            </label>
 
-          <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1 border-t border-white/[0.06]">
-            Existing Infrastructure
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.rivers}
+                onChange={() => toggleLayer('rivers')}
+                className="rounded border-slate-700 text-sky-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Rivers</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.riverCrossings}
+                onChange={() => toggleLayer('riverCrossings')}
+                className="rounded border-slate-700 text-cyan-500 focus:ring-0 cursor-pointer"
+              />
+              <span>River Crossings (🌊)</span>
+            </label>
+
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider pt-1.5 border-t border-white/[0.06]">
+              Existing Infrastructure
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.pipelines}
+                onChange={() => toggleLayer('pipelines')}
+                className="rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Pipelines</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.undergroundCables}
+                onChange={() => toggleLayer('undergroundCables')}
+                className="rounded border-slate-700 text-purple-500 focus:ring-0 cursor-pointer"
+              />
+              <span>Underground Power Cables</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
+              <input
+                type="checkbox"
+                checked={layers.utilityIntersections}
+                onChange={() => toggleLayer('utilityIntersections')}
+                className="rounded border-slate-700 text-sky-400 focus:ring-0 cursor-pointer"
+              />
+              <span>Utility Intersections (◆)</span>
+            </label>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.pipelines}
-              onChange={() => toggleLayer('pipelines')}
-              className="rounded border-slate-700 text-amber-500 focus:ring-0"
-            />
-            <span>Pipelines</span>
-          </label>
-
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.undergroundCables}
-              onChange={() => toggleLayer('undergroundCables')}
-              className="rounded border-slate-700 text-purple-500 focus:ring-0"
-            />
-            <span>Underground Power Cables</span>
-          </label>
-
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300">
-            <input
-              type="checkbox"
-              checked={layers.utilityIntersections}
-              onChange={() => toggleLayer('utilityIntersections')}
-              className="rounded border-slate-700 text-sky-400 focus:ring-0"
-            />
-            <span>Utility Intersections (◆)</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Map Legend */}
-      <div className="absolute bottom-4 left-4 z-20 glass rounded-xl p-3 text-xs space-y-1.5 border border-white/[0.08] text-slate-300">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-          MAP LEGEND
-        </div>
-        <div className="text-[9px] font-bold text-slate-500 uppercase">ROUTES</div>
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 shrink-0" />
-          <span>Route A</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-          <span>Route B</span>
         </div>
 
-        <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">ENVIRONMENT</div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-emerald-500/40 border border-emerald-500 shrink-0" />
-          <span>Forest</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-amber-500/40 border border-amber-500 shrink-0" />
-          <span>Protected Area</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3.5 h-0.5 bg-sky-400 shrink-0" />
-          <span>River</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs">🌊</span>
-          <span>River crossing</span>
-        </div>
+        {/* Map Legend Section */}
+        <div className="pt-2 border-t border-white/[0.08] space-y-1 text-slate-300">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            MAP LEGEND
+          </div>
+          <div className="text-[9px] font-bold text-slate-500 uppercase">ROUTES</div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-teal-400 shrink-0" />
+            <span>Route A</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+            <span>Route B</span>
+          </div>
 
-        <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">INFRASTRUCTURE</div>
-        <div className="flex items-center gap-2">
-          <div className="w-3.5 h-0.5 bg-amber-500 border-b border-dashed border-amber-400 shrink-0" />
-          <span>Pipeline</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3.5 h-0.5 bg-purple-400 border-b border-dashed border-purple-300 shrink-0" />
-          <span>Underground power cable</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sky-400 text-xs font-black">◆</span>
-          <span>Utility intersection</span>
+          <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">ENVIRONMENT</div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-500/40 border border-emerald-500 shrink-0" />
+            <span>Forest</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-amber-500/40 border border-amber-500 shrink-0" />
+            <span>Protected Area</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-0.5 bg-sky-400 shrink-0" />
+            <span>River</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs">🌊</span>
+            <span>River crossing</span>
+          </div>
+
+          <div className="text-[9px] font-bold text-slate-500 uppercase pt-1">INFRASTRUCTURE</div>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-0.5 bg-amber-500 border-b border-dashed border-amber-400 shrink-0" />
+            <span>Pipeline</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-0.5 bg-purple-400 border-b border-dashed border-purple-300 shrink-0" />
+            <span>Underground power cable</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sky-400 text-xs font-black">◆</span>
+            <span>Utility intersection</span>
+          </div>
         </div>
       </div>
     </div>
