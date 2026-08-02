@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RouteOption, GISLayerState } from '../types';
-import { Layers, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Layers, MapPin, ChevronDown, ChevronUp, X, Globe, Sun, Image } from 'lucide-react';
 
 interface GISMapProps {
   routes: RouteOption[];
@@ -13,6 +13,8 @@ interface GISMapProps {
   sourceName?: string;
   destName?: string;
 }
+
+export type MapStyle = 'dark' | 'satellite' | 'hybrid' | 'terrain';
 
 export const GISMap: React.FC<GISMapProps> = ({
   routes,
@@ -25,6 +27,9 @@ export const GISMap: React.FC<GISMapProps> = ({
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const labelLayerRef = useRef<L.TileLayer | null>(null);
 
   const routeGroupRef = useRef<L.LayerGroup | null>(null);
   const forestGroupRef = useRef<L.LayerGroup | null>(null);
@@ -46,6 +51,7 @@ export const GISMap: React.FC<GISMapProps> = ({
     utilityIntersections: true,
   });
 
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const [panelTab, setPanelTab] = useState<'layers' | 'legend' | 'both'>('both');
   const [panelCollapsed, setPanelCollapsed] = useState<boolean>(() => {
     return typeof window !== 'undefined' && window.innerWidth < 768;
@@ -94,14 +100,6 @@ export const GISMap: React.FC<GISMapProps> = ({
       attributionControl: false,
     }).setView([20.5937, 78.9629], 5);
 
-    L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {
-        subdomains: 'abcd',
-        maxZoom: 19,
-      }
-    ).addTo(map);
-
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     routeGroupRef.current = L.layerGroup().addTo(map);
@@ -120,6 +118,43 @@ export const GISMap: React.FC<GISMapProps> = ({
       mapRef.current = null;
     };
   }, []);
+
+  // Update Dynamic Tile Basemap Layer (Dark / Satellite / Hybrid / Terrain)
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+    if (labelLayerRef.current) map.removeLayer(labelLayerRef.current);
+    labelLayerRef.current = null;
+
+    if (mapStyle === 'satellite') {
+      tileLayerRef.current = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, attribution: 'Tiles &copy; Esri World Imagery' }
+      ).addTo(map);
+    } else if (mapStyle === 'hybrid') {
+      tileLayerRef.current = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, attribution: 'Tiles &copy; Esri World Imagery' }
+      ).addTo(map);
+      labelLayerRef.current = L.tileLayer(
+        'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19 }
+      ).addTo(map);
+    } else if (mapStyle === 'terrain') {
+      tileLayerRef.current = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, attribution: 'Tiles &copy; Esri World Topo Map' }
+      ).addTo(map);
+    } else {
+      // Default Vector Dark Mode
+      tileLayerRef.current = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        { subdomains: 'abcd', maxZoom: 19 }
+      ).addTo(map);
+    }
+  }, [mapStyle]);
 
   // Update Layer Visibility
   useEffect(() => {
@@ -393,18 +428,18 @@ export const GISMap: React.FC<GISMapProps> = ({
           className="absolute top-3 left-3 z-30 glass rounded-xl px-3 py-2 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-2 border border-white/[0.12] shadow-xl backdrop-blur-md cursor-pointer transition-all active:scale-95"
         >
           <Layers className="w-4 h-4 text-teal-400" />
-          <span>GIS Layers & Legend</span>
+          <span>GIS Layers & Map Style</span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
       ) : (
         /* Expanded Unified Responsive Sidebar Overlay */
-        <div className="absolute top-3 left-3 md:top-4 md:left-4 z-30 glass rounded-2xl p-3 text-xs w-[230px] sm:w-[250px] max-h-[calc(100%-1.5rem)] overflow-y-auto border border-white/[0.1] shadow-2xl transition-all duration-300">
+        <div className="absolute top-3 left-3 md:top-4 md:left-4 z-30 glass rounded-2xl p-3 text-xs w-[240px] sm:w-[260px] max-h-[calc(100%-1.5rem)] overflow-y-auto border border-white/[0.1] shadow-2xl transition-all duration-300">
           
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-1.5 mb-2">
             <div className="flex items-center gap-1.5 text-slate-200 font-bold text-xs">
-              <Layers className="w-3.5 h-3.5 text-teal-400" />
-              <span>GIS PANELS</span>
+              <Globe className="w-3.5 h-3.5 text-teal-400" />
+              <span>GIS MAP CONTROLS</span>
             </div>
 
             <button
@@ -414,6 +449,58 @@ export const GISMap: React.FC<GISMapProps> = ({
             >
               <X className="w-3.5 h-3.5" />
             </button>
+          </div>
+
+          {/* BASEMAP MAP VIEW SELECTOR (Hybrid / Satellite / Terrain Vector / Dark) */}
+          <div className="mb-3 space-y-1">
+            <div className="text-[9px] font-bold text-teal-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Globe className="w-3 h-3 text-teal-400" /> MAP VIEW STYLES
+            </div>
+            <div className="grid grid-cols-2 gap-1 bg-black/40 p-1.5 rounded-xl border border-white/[0.06]">
+              <button
+                onClick={() => setMapStyle('dark')}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  mapStyle === 'dark'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>Dark Vector</span>
+              </button>
+
+              <button
+                onClick={() => setMapStyle('satellite')}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  mapStyle === 'satellite'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>Satellite</span>
+              </button>
+
+              <button
+                onClick={() => setMapStyle('hybrid')}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  mapStyle === 'hybrid'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>Hybrid Map</span>
+              </button>
+
+              <button
+                onClick={() => setMapStyle('terrain')}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  mapStyle === 'terrain'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>Terrain Vector</span>
+              </button>
+            </div>
           </div>
 
           {/* View Tabs */}
